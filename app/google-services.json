@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "209132325202",
+    "project_id": "findmygymlogin",
+    "storage_bucket": "findmygymlogin.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:209132325202:android:a85532e1febcd66a26d28b",
+        "android_client_info": {
+          "package_name": "com.example.findmygym"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDec5WJHGkw44PUnhzcZGb_bUpT_HFV9pk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
