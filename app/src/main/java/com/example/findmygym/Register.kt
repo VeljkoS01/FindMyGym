@@ -4,14 +4,9 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import com.example.findmygym.databinding.ActivityRegisterBinding
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -22,33 +17,32 @@ class Register : AppCompatActivity() {
 
     private lateinit var binding: ActivityRegisterBinding
     private lateinit var firebaseAuth: FirebaseAuth
-    private lateinit var firestore: FirebaseFirestore
     private lateinit var storage: FirebaseStorage
+    private var photoUri: Uri? = null // For photo upload
 
-    private lateinit var photoResultLauncher: ActivityResultLauncher<Intent>
-    private var photoUri: Uri? = null
+    // Register for activity result to pick photo from gallery
+    private val pickPhotoLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            photoUri = result.data?.data
+            Toast.makeText(this, "Photo selected successfully", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Photo selection failed", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         binding = ActivityRegisterBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         firebaseAuth = FirebaseAuth.getInstance()
-        firestore = FirebaseFirestore.getInstance()
         storage = FirebaseStorage.getInstance()
 
-        // Handle photo upload
-        photoResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                photoUri = result.data?.data
-                binding.uploadPhotoButton.text = "Photo Selected"
-            }
-        }
-
+        // Pick photo logic (from gallery)
         binding.uploadPhotoButton.setOnClickListener {
-            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-            photoResultLauncher.launch(intent)
+            val intent = Intent(Intent.ACTION_PICK)
+            intent.type = "image/*"
+            pickPhotoLauncher.launch(intent)
         }
 
         binding.registerButton.setOnClickListener {
@@ -60,23 +54,24 @@ class Register : AppCompatActivity() {
             val surname = binding.registerSurname.text.toString()
             val phone = binding.registerPhone.text.toString()
 
+            // Provera da li su svi podaci uneti
             if (email.isNotEmpty() && password.isNotEmpty() && confirmPassword.isNotEmpty() &&
-                username.isNotEmpty() && name.isNotEmpty() && surname.isNotEmpty() && phone.isNotEmpty()) {
+                username.isNotEmpty() && name.isNotEmpty() && surname.isNotEmpty() && phone.isNotEmpty() && photoUri != null
+            ) {
                 if (password == confirmPassword) {
+                    // Kreiranje korisnika u Firebase Authentication
                     firebaseAuth.createUserWithEmailAndPassword(email, password).addOnCompleteListener {
                         if (it.isSuccessful) {
                             val userId = firebaseAuth.currentUser?.uid
-                            val user = mutableMapOf<String, Any>(
+                            val user = hashMapOf(
                                 "username" to username,
                                 "name" to name,
                                 "surname" to surname,
-                                "phone" to phone
+                                "phone" to phone,
+                                "email" to email
                             )
-                            if (photoUri != null) {
-                                uploadPhoto(userId, user)
-                            } else {
-                                saveUserData(userId, user)
-                            }
+                            // Upload fotografije
+                            uploadPhoto(userId, user)
                         } else {
                             Toast.makeText(this, it.exception.toString(), Toast.LENGTH_SHORT).show()
                         }
@@ -85,58 +80,44 @@ class Register : AppCompatActivity() {
                     Toast.makeText(this, "Passwords do not match", Toast.LENGTH_SHORT).show()
                 }
             } else {
-                Toast.makeText(this, "Fields cannot be empty", Toast.LENGTH_SHORT).show()
+                if (photoUri == null) {
+                    Toast.makeText(this, "Please upload a photo", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Fields cannot be empty", Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
-
+        // Redirect na Login stranu
         binding.loginRedirectText.setOnClickListener {
             val loginIntent = Intent(this, Login::class.java)
             startActivity(loginIntent)
         }
-
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
     }
 
-    private fun uploadPhoto(userId: String?, user: MutableMap<String, Any>) {
-        if (userId == null || photoUri == null) {
-            Toast.makeText(this, "User ID or photo URI is null", Toast.LENGTH_SHORT).show()
-            return
-        }
-
+    private fun uploadPhoto(userId: String?, user: Map<String, Any>) {
         val photoRef = storage.reference.child("profile_photos/$userId/${UUID.randomUUID()}")
-
         photoUri?.let { uri ->
-            photoRef.putFile(uri)
-                .addOnSuccessListener {
-                    photoRef.downloadUrl.addOnSuccessListener { url ->
-                        saveUserData(userId, user.apply { put("photoUrl", url.toString()) })
-                    }.addOnFailureListener { e ->
-                        Toast.makeText(this, "Failed to get download URL: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
+            photoRef.putFile(uri).addOnSuccessListener {
+                photoRef.downloadUrl.addOnSuccessListener { url ->
+                    saveUserData(userId, user.plus("photoUrl" to url.toString()))
                 }
-                .addOnFailureListener { e ->
-                    Toast.makeText(this, "Photo upload failed: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+            }.addOnFailureListener {
+                Toast.makeText(this, "Photo upload failed", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
-
-
-    private fun saveUserData(userId: String?, user: MutableMap<String, Any>) {
+    private fun saveUserData(userId: String?, user: Map<String, Any>) {
         userId?.let {
-            firestore.collection("users").document(it).set(user)
+            FirebaseFirestore.getInstance().collection("users").document(it).set(user)
                 .addOnSuccessListener {
-                    Toast.makeText(this, "Registration successful", Toast.LENGTH_SHORT).show()
-                    val intent = Intent(this, MainActivity::class.java)
+                    Toast.makeText(this, "User registered successfully", Toast.LENGTH_SHORT).show()
+                    val intent = Intent(this, Login::class.java)
                     startActivity(intent)
                 }
                 .addOnFailureListener {
-                    Toast.makeText(this, "Error saving user data", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "User registration failed", Toast.LENGTH_SHORT).show()
                 }
         }
     }

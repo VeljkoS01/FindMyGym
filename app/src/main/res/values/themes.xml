@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.FindMyGym" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.FindMyGym" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">#FFFF00</item>
+        <item name="colorPrimaryDark">#FF00FF</item>
+        <item name="colorAccent">#00FFFF</item>
+    </style>
+
 </resources>

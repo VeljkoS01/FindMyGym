@@ -10,5 +10,6 @@
     <color name="grey">#ff424242</color>
     <color name="violet">#A141FF</color>
     <color name="semi_transparent_white">#AAFFFFFF</color>
+    <color name="transparent">#00000000</color>
 
 </resources>

@@ -1,22 +1,76 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/main_activity"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/login"
+    android:padding="30dp"
     tools:context=".MainActivity">
 
-  <TextView
-      android:layout_width="wrap_content"
+  <!-- CardView to hold all content -->
+  <androidx.cardview.widget.CardView
+      android:id="@+id/card_view"
+      android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:text="Wlecome to FindMyGym"
-      android:textColor="@color/violet"
-      android:textSize="30sp"
-      app:layout_constraintBottom_toBottomOf="parent"
-      app:layout_constraintEnd_toEndOf="parent"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintTop_toTopOf="parent" />
+      android:layout_marginTop="20dp"
+      app:cardCornerRadius="8dp"
+      app:cardElevation="4dp"
+      app:cardBackgroundColor="@color/transparent"
+      app:layout_constraintTop_toTopOf="parent"
+      app:layout_constraintLeft_toLeftOf="parent"
+      app:layout_constraintRight_toRightOf="parent">
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/violet_border"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+      <!-- Profile Image -->
+      <ImageView
+          android:id="@+id/profile_image"
+          android:layout_width="100dp"
+          android:layout_height="100dp"
+          android:layout_marginTop="24dp"
+          android:src="@drawable/default_profile_image"
+          android:scaleType="centerCrop"
+          android:contentDescription="User profile image"
+          android:layout_gravity="center"/>
+
+      <!-- User Details -->
+      <TextView
+          android:id="@+id/user_name"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="16dp"
+          android:text="Name Surname"
+          android:textSize="20sp"
+          android:textStyle="bold"
+          android:gravity="center"/>
+
+      <TextView
+          android:id="@+id/user_email"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="8dp"
+          android:text="user@example.com"
+          android:textSize="16sp"
+          android:gravity="center"/>
+
+      <TextView
+          android:id="@+id/user_phone"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="8dp"
+          android:text="Phone: +123456789"
+          android:textSize="16sp"
+          android:gravity="center"/>
+
+    </LinearLayout>
+  </androidx.cardview.widget.CardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
