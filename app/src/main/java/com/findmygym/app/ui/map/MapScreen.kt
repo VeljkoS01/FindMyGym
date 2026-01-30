@@ -1,32 +1,36 @@
 package com.findmygym.app.ui.map
 
 import android.Manifest
-import android.annotation.SuppressLint
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.maps.model.CameraPosition
+import androidx.compose.ui.unit.dp
+import com.findmygym.app.location.LocationTracker
 import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.MapProperties
-import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.maps.android.compose.*
 
 @Composable
 fun MapScreen() {
     val context = LocalContext.current
+    val tracker = remember { LocationTracker(context) }
 
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { }
+    var myLatLng by remember { mutableStateOf<LatLng?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    // Permission request
+    val permissionLauncher = rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { perms ->
+        val ok = (perms[Manifest.permission.ACCESS_FINE_LOCATION] == true) ||
+                (perms[Manifest.permission.ACCESS_COARSE_LOCATION] == true)
+        if (!ok) error = "Location permission denied"
+    }
 
     LaunchedEffect(Unit) {
-        launcher.launch(
+        permissionLauncher.launch(
             arrayOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION
@@ -34,29 +38,37 @@ fun MapScreen() {
         )
     }
 
-    val nis = LatLng(43.3209, 21.8958)
-    val cameraState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(nis, 13f)
-    }
-
-    val fused = remember { LocationServices.getFusedLocationProviderClient(context) }
-
-    @SuppressLint("MissingPermission")
     LaunchedEffect(Unit) {
         try {
-            fused.lastLocation.addOnSuccessListener { l ->
-                if (l != null) {
-                    cameraState.position = CameraPosition.fromLatLngZoom(
-                        LatLng(l.latitude, l.longitude), 15f
-                    )
-                }
+            val loc = tracker.getLastLocation()
+            if (loc != null) {
+                myLatLng = LatLng(loc.latitude, loc.longitude)
+            } else {
+                error = "No location yet. Try moving / enabling GPS."
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            error = e.message
+        }
     }
 
-    GoogleMap(
-        modifier = Modifier.fillMaxSize(),
-        cameraPositionState = cameraState,
-        properties = MapProperties(isMyLocationEnabled = true)
-    )
+    Column(Modifier.fillMaxSize()) {
+        if (error != null) {
+            Text(error!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(12.dp))
+        }
+
+        val start = myLatLng ?: LatLng(43.3209, 21.8958) // Nis fallback
+        val cameraPositionState = rememberCameraPositionState {
+            position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(start, 14f)
+        }
+
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            properties = MapProperties(isMyLocationEnabled = myLatLng != null)
+        ) {
+            myLatLng?.let {
+                Marker(state = MarkerState(position = it), title = "You")
+            }
+        }
+    }
 }
