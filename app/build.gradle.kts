@@ -60,4 +60,6 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("com.google.android.gms:play-services-maps:20.0.0")
     implementation("com.google.maps.android:maps-compose:8.0.0")
+
+    implementation("androidx.navigation:navigation-compose:2.9.6")
 }
