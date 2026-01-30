@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1038224533932",
+    "project_id": "findmygym-847cc",
+    "storage_bucket": "findmygym-847cc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1038224533932:android:637ba0fcad42ff00c1f209",
+        "android_client_info": {
+          "package_name": "com.findmygym.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDFpC3Ydgt0zWrdFB-WMgsekJ91DrWN_B8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -62,4 +64,12 @@ dependencies {
     implementation("com.google.maps.android:maps-compose:8.0.0")
 
     implementation("androidx.navigation:navigation-compose:2.9.6")
+
+    implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
+
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-storage")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
 }
