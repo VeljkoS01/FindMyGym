@@ -14,19 +14,30 @@ fun AppNav() {
 
     NavHost(
         navController = nav,
-        startDestination = Routes.MAP // za sada MAP; kasnije kad ubacimo Firebase bice LOGIN
+        startDestination = Routes.LOGIN
     ) {
         composable(Routes.LOGIN) {
             LoginScreen(
                 onGoRegister = { nav.navigate(Routes.REGISTER) },
-                onGoMap = { nav.navigate(Routes.MAP) }
+                onGoMap = {
+                    nav.navigate(Routes.MAP) {
+                        popUpTo(Routes.LOGIN) { inclusive = true }
+                    }
+                }
             )
         }
+
         composable(Routes.REGISTER) {
             RegisterScreen(
-                onBackToLogin = { nav.popBackStack() }
+                onBackToLogin = { nav.popBackStack() },
+                onGoMap = {
+                    nav.navigate(Routes.MAP) {
+                        popUpTo(Routes.LOGIN) { inclusive = true }
+                    }
+                }
             )
         }
+
         composable(Routes.MAP) {
             MapScreen()
         }
