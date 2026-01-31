@@ -117,4 +117,35 @@ class GymsRepository(
             null
         }.await()
     }
+
+    suspend fun rateGym(gymId: String, value: Int) {
+        require(value in 1..5) { "Rating must be 1..5" }
+
+        val uid = authRepo.currentUid() ?: throw Exception("Not logged in")
+
+        val gymRef = db.collection("gyms").document(gymId)
+        val ratingRef = gymRef.collection("ratings").document(uid)
+        val userRef = db.collection("users").document(uid)
+
+        db.runTransaction { tx ->
+            val ratingSnap = tx.get(ratingRef)
+            val gymSnap = tx.get(gymRef)
+
+            if (ratingSnap.exists()) {
+                throw IllegalStateException("You already rated this gym")
+            }
+
+            val oldAvg = (gymSnap.getDouble("avgRating") ?: 0.0)
+            val oldCount = (gymSnap.getLong("ratingCount") ?: 0L)
+
+            val newCount = oldCount + 1
+            val newAvg = ((oldAvg * oldCount) + value) / newCount.toDouble()
+
+            tx.set(ratingRef, mapOf("value" to value, "createdAt" to FieldValue.serverTimestamp()))
+            tx.update(gymRef, mapOf("avgRating" to newAvg, "ratingCount" to newCount))
+            tx.update(userRef, "points", FieldValue.increment(1))
+
+            null
+        }.await()
+    }
 }
