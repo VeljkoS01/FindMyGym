@@ -6,18 +6,20 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.findmygym.app.data.auth.AuthRepository
 import com.findmygym.app.location.LocationTracker
+import com.findmygym.app.nav.Routes
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
-fun MapScreen() {
+fun MapScreen(onGoLeaderboard: () -> Unit) {
     val context = LocalContext.current
     val tracker = remember { LocationTracker(context) }
     val authRepo = remember { AuthRepository() }
@@ -128,6 +130,15 @@ fun MapScreen() {
                 .padding(16.dp)
         ) {
             Text("+")
+        }
+
+        FloatingActionButton(
+            onClick = onGoLeaderboard,
+            modifier = Modifier
+                .align(androidx.compose.ui.Alignment.BottomStart)
+                .padding(16.dp)
+        ) {
+            Text("🏆")
         }
     }
 

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.findmygym.app.ui.leaderboard.LeaderboardScreen
 import com.findmygym.app.ui.login.LoginScreen
 import com.findmygym.app.ui.login.RegisterScreen
 import com.findmygym.app.ui.map.MapScreen
@@ -39,7 +40,13 @@ fun AppNav() {
         }
 
         composable(Routes.MAP) {
-            MapScreen()
+            MapScreen(
+                onGoLeaderboard = { nav.navigate(Routes.LEADERBOARD) }
+            )
+        }
+
+        composable(Routes.LEADERBOARD) {
+            LeaderboardScreen(onBack = { nav.popBackStack() })
         }
     }
 }

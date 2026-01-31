@@ -4,4 +4,5 @@ object Routes {
     const val LOGIN = "login"
     const val REGISTER = "register"
     const val MAP = "map"
+    const val LEADERBOARD = "leaderboard"
 }
