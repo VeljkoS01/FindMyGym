@@ -92,4 +92,22 @@ class AuthRepository(
         val snap = db.collection("users").document(uid).get().await()
         return snap.toObject(AppUser::class.java)
     }
+
+    suspend fun updateMyLocation(lat: Double, lng: Double) {
+        val uid = currentUid() ?: return
+        db.collection("users").document(uid).update(
+            mapOf(
+                "lastLat" to lat,
+                "lastLng" to lng,
+                "lastLocAt" to FieldValue.serverTimestamp()
+            )
+        ).await()
+    }
+
+    suspend fun addMyPoints(delta: Int) {
+        val uid = currentUid() ?: return
+        db.collection("users").document(uid)
+            .update("points", FieldValue.increment(delta.toLong()))
+            .await()
+    }
 }
