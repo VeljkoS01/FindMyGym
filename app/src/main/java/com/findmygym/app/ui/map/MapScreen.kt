@@ -1,6 +1,7 @@
 package com.findmygym.app.ui.map
 
 import android.Manifest
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -8,17 +9,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.findmygym.app.data.auth.AuthRepository
 import com.findmygym.app.location.LocationTracker
+import com.findmygym.app.notifications.NotificationHelper
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.safeDrawing
 
 @Composable
 fun MapScreen(
@@ -29,46 +29,55 @@ fun MapScreen(
     val authRepo = remember { AuthRepository() }
     val vm: MapViewModel = viewModel()
 
-    var hasPermission by remember { mutableStateOf(false) }
+    var hasLocationPermission by remember { mutableStateOf(false) }
     var myLatLng by remember { mutableStateOf<LatLng?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var localError by remember { mutableStateOf<String?>(null) }
 
-    // Marker -> open actions dialog (rating + comment)
     var selectedGymId by remember { mutableStateOf<String?>(null) }
 
-    // Add gym dialog
     var showAdd by remember { mutableStateOf(false) }
     var gymName by remember { mutableStateOf("") }
     var gymType by remember { mutableStateOf("Gym") }
     var gymDesc by remember { mutableStateOf("") }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
+    var notifPermissionOk by remember { mutableStateOf(Build.VERSION.SDK_INT < 33) }
+
+    val notifLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        notifPermissionOk = granted
+    }
+
+    val locationPermLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { perms ->
         val ok = (perms[Manifest.permission.ACCESS_FINE_LOCATION] == true) ||
                 (perms[Manifest.permission.ACCESS_COARSE_LOCATION] == true)
-        hasPermission = ok
-        if (!ok) error = "Location permission denied"
+        hasLocationPermission = ok
+        if (!ok) localError = "Location permission denied"
     }
 
     LaunchedEffect(Unit) {
-        permissionLauncher.launch(
+        locationPermLauncher.launch(
             arrayOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION
             )
         )
+
+        if (Build.VERSION.SDK_INT >= 33) {
+            notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
-    val fallback = LatLng(43.3209, 21.8958) // Nis
+    val fallback = LatLng(43.3209, 21.8958)
     val cameraPositionState = rememberCameraPositionState {
-        position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(fallback, 14f)
+        position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(fallback, 13f)
     }
 
-    // Live updates + periodic Firestore location update (every 10s)
-    LaunchedEffect(hasPermission) {
-        if (!hasPermission) return@LaunchedEffect
-        error = null
+    LaunchedEffect(hasLocationPermission) {
+        if (!hasLocationPermission) return@LaunchedEffect
+        localError = null
 
         var lastSentMs = 0L
         try {
@@ -85,12 +94,45 @@ fun MapScreen(
                     try {
                         authRepo.updateMyLocation(loc.latitude, loc.longitude)
                     } catch (_: Exception) {
-                        // ignore silent fail
                     }
                 }
             }
         } catch (e: Exception) {
-            error = e.message
+            localError = e.message
+        }
+    }
+
+    var lastNotifiedGymId by remember { mutableStateOf<String?>(null) }
+    var lastNotifiedAt by remember { mutableStateOf(0L) }
+
+    LaunchedEffect(notifPermissionOk, vm.gyms) {
+        if (!notifPermissionOk) return@LaunchedEffect
+        NotificationHelper.ensureChannel(context)
+
+        while (true) {
+            val ll = myLatLng
+            if (ll != null) {
+                val near = vm.gyms
+                    .map { g -> g to vm.distanceKm(ll.latitude, ll.longitude, g.lat, g.lng) }
+                    .filter { it.second <= 0.2 }
+                    .minByOrNull { it.second }
+                    ?.first
+
+                val now = System.currentTimeMillis()
+                val cooldownOk = now - lastNotifiedAt > 3 * 60 * 1000
+
+                if (near != null && (near.id != lastNotifiedGymId || cooldownOk)) {
+                    lastNotifiedGymId = near.id
+                    lastNotifiedAt = now
+
+                    NotificationHelper.showNearbyGym(
+                        context = context,
+                        title = "Gym nearby",
+                        message = "${near.name} is close to you"
+                    )
+                }
+            }
+            delay(15_000)
         }
     }
 
@@ -100,10 +142,9 @@ fun MapScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .windowInsetsPadding(WindowInsets.systemBars)
     ) {
-        // Errors
-        (error ?: vm.error)?.let {
+        (localError ?: vm.error)?.let {
             Text(
                 it,
                 color = MaterialTheme.colorScheme.error,
@@ -111,7 +152,6 @@ fun MapScreen(
             )
         }
 
-        // Search + radius
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -123,21 +163,18 @@ fun MapScreen(
                 label = { Text("Search gyms") },
                 modifier = Modifier.fillMaxWidth()
             )
-
             Spacer(Modifier.height(8.dp))
-
             RadiusDropdown(
                 radiusKm = vm.radiusKm,
                 onChange = { vm.radiusKm = it }
             )
         }
 
-        // Map (takes remaining space)
         Box(modifier = Modifier.weight(1f)) {
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
-                properties = MapProperties(isMyLocationEnabled = hasPermission)
+                properties = MapProperties(isMyLocationEnabled = hasLocationPermission)
             ) {
                 myLatLng?.let {
                     Marker(state = MarkerState(position = it), title = "You")
@@ -156,7 +193,6 @@ fun MapScreen(
                 }
             }
 
-            // Leaderboard FAB (left)
             FloatingActionButton(
                 onClick = onGoLeaderboard,
                 modifier = Modifier
@@ -166,11 +202,10 @@ fun MapScreen(
                 Text("🏆")
             }
 
-            // Add gym FAB (right)
             FloatingActionButton(
                 onClick = {
                     if (myLatLng == null) {
-                        error = "No location yet."
+                        localError = "No location yet."
                     } else {
                         showAdd = true
                     }
@@ -183,7 +218,6 @@ fun MapScreen(
             }
         }
 
-        // Results list (mini table)
         if (filtered.isNotEmpty()) {
             Divider()
             Text(
@@ -210,12 +244,12 @@ fun MapScreen(
         }
     }
 
-    // Add gym dialog
     if (showAdd) {
         AlertDialog(
             onDismissRequest = { showAdd = false },
             confirmButton = {
                 TextButton(
+                    enabled = gymName.trim().isNotBlank(),
                     onClick = {
                         val ll = myLatLng ?: return@TextButton
                         vm.addGym(
@@ -264,7 +298,6 @@ fun MapScreen(
         )
     }
 
-    // Comment + Rating dialog
     selectedGymId?.let { gymId ->
         CommentDialog(
             gymId = gymId,

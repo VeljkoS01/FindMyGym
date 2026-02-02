@@ -3,7 +3,7 @@ package com.findmygym.app.data.model
 data class Gym(
     val id: String = "",
     val name: String = "",
-    val type: String = "Gym", // Gym / Outdoor / Crossfit...
+    val type: String = "Gym",
     val description: String = "",
     val lat: Double = 0.0,
     val lng: Double = 0.0,

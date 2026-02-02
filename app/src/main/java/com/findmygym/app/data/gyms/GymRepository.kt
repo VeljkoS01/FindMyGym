@@ -62,7 +62,6 @@ class GymsRepository(
 
             tx.set(gymRef, gym)
 
-            // +5 points for adding a gym
             val userRef = db.collection("users").document(uid)
             tx.update(userRef, "points", FieldValue.increment(5))
 
@@ -110,7 +109,6 @@ class GymsRepository(
 
             tx.set(commentRef, c)
 
-            // +2 points for commenting
             val userRef = db.collection("users").document(uid)
             tx.update(userRef, "points", FieldValue.increment(2))
 

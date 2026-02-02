@@ -21,7 +21,7 @@ class MapViewModel(
         private set
 
     var query by mutableStateOf("")
-    var radiusKm by mutableStateOf(0) // 0 = no radius filter
+    var radiusKm by mutableStateOf(0)
 
     init {
         viewModelScope.launch {
@@ -72,12 +72,10 @@ class MapViewModel(
             return dKm <= radiusKm.toDouble()
         }
 
-        return gyms
-            .filter { matches(it) }
-            .filter { withinRadius(it) }
+        return gyms.filter { matches(it) }.filter { withinRadius(it) }
     }
 
-    private fun distanceKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+    fun distanceKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val r = 6371.0
         val dLat = Math.toRadians(lat2 - lat1)
         val dLon = Math.toRadians(lon2 - lon1)

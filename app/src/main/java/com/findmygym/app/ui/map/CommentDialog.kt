@@ -28,7 +28,6 @@ fun CommentDialog(
         title = { Text("Gym actions") },
         text = {
             Column {
-                // Rating section
                 Text("Rate this gym", style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(6.dp))
 
@@ -62,7 +61,6 @@ fun CommentDialog(
 
                 Spacer(Modifier.height(14.dp))
 
-                // Comment section
                 Text("Add comment", style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(6.dp))
 
@@ -87,7 +85,7 @@ fun CommentDialog(
                     error = null
                     scope.launch {
                         try {
-                            repo.addComment(gymId, text) // +2 points in repo transaction
+                            repo.addComment(gymId, text)
                             text = ""
                             onClose()
                         } catch (e: Exception) {
