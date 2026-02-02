@@ -5,7 +5,6 @@ data class AppUser(
     val username: String = "",
     val fullName: String = "",
     val phone: String = "",
-    val photoBase64: String? = null,
     val points: Int = 0,
     val createdAt: Long = System.currentTimeMillis()
 )

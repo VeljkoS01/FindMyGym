@@ -35,11 +35,17 @@ fun MapScreen(
 
     var selectedGymId by remember { mutableStateOf<String?>(null) }
 
+    // add gym dialog state
     var showAdd by remember { mutableStateOf(false) }
     var gymName by remember { mutableStateOf("") }
     var gymType by remember { mutableStateOf("Gym") }
     var gymDesc by remember { mutableStateOf("") }
 
+    // picking mode + pending pin
+    var pickingLocation by remember { mutableStateOf(false) }
+    var pendingLatLng by remember { mutableStateOf<LatLng?>(null) }
+
+    // notifications permission (Android 13+)
     var notifPermissionOk by remember { mutableStateOf(Build.VERSION.SDK_INT < 33) }
 
     val notifLauncher = rememberLauncherForActivityResult(
@@ -75,6 +81,7 @@ fun MapScreen(
         position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(fallback, 13f)
     }
 
+    // live location tracking (still used for "You" marker and notifications)
     LaunchedEffect(hasLocationPermission) {
         if (!hasLocationPermission) return@LaunchedEffect
         localError = null
@@ -102,6 +109,7 @@ fun MapScreen(
         }
     }
 
+    // nearby notifications
     var lastNotifiedGymId by remember { mutableStateOf<String?>(null) }
     var lastNotifiedAt by remember { mutableStateOf(0L) }
 
@@ -174,12 +182,36 @@ fun MapScreen(
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
-                properties = MapProperties(isMyLocationEnabled = hasLocationPermission)
+                properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
+
+                // ✅ when + mode is ON, user taps map to place the pin
+                onMapClick = { ll ->
+                    if (pickingLocation) {
+                        pendingLatLng = ll
+                        showAdd = true
+                        pickingLocation = false
+                    }
+                },
+
+                // optional: long press also works
+                onMapLongClick = { ll ->
+                    if (pickingLocation) {
+                        pendingLatLng = ll
+                        showAdd = true
+                        pickingLocation = false
+                    }
+                }
             ) {
-                myLatLng?.let {
-                    Marker(state = MarkerState(position = it), title = "You")
+
+                // pending marker (selected location for new gym)
+                pendingLatLng?.let { ll ->
+                    Marker(
+                        state = MarkerState(position = ll),
+                        title = "New gym here"
+                    )
                 }
 
+                // gyms markers
                 filtered.forEach { g ->
                     Marker(
                         state = MarkerState(position = LatLng(g.lat, g.lng)),
@@ -189,6 +221,21 @@ fun MapScreen(
                             selectedGymId = g.id
                             true
                         }
+                    )
+                }
+            }
+
+            // small hint when choosing location
+            if (pickingLocation) {
+                Surface(
+                    tonalElevation = 2.dp,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        "Tap on map to place the gym pin",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
                     )
                 }
             }
@@ -204,11 +251,10 @@ fun MapScreen(
 
             FloatingActionButton(
                 onClick = {
-                    if (myLatLng == null) {
-                        localError = "No location yet."
-                    } else {
-                        showAdd = true
-                    }
+                    // ✅ + starts "pick location" mode, NOT my location
+                    localError = null
+                    pendingLatLng = null
+                    pickingLocation = true
                 },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -246,33 +292,56 @@ fun MapScreen(
 
     if (showAdd) {
         AlertDialog(
-            onDismissRequest = { showAdd = false },
+            onDismissRequest = {
+                showAdd = false
+                pendingLatLng = null
+                pickingLocation = false
+            },
             confirmButton = {
                 TextButton(
                     enabled = gymName.trim().isNotBlank(),
                     onClick = {
-                        val ll = myLatLng ?: return@TextButton
+                        val target = pendingLatLng
+                        if (target == null) {
+                            localError = "Please pick a location on the map first."
+                            showAdd = false
+                            return@TextButton
+                        }
+
                         vm.addGym(
                             name = gymName,
                             type = gymType,
                             desc = gymDesc,
-                            lat = ll.latitude,
-                            lng = ll.longitude
+                            lat = target.latitude,
+                            lng = target.longitude
                         ) {
                             gymName = ""
                             gymType = "Gym"
                             gymDesc = ""
                             showAdd = false
+                            pendingLatLng = null
                         }
                     }
                 ) { Text("Add") }
             },
             dismissButton = {
-                TextButton(onClick = { showAdd = false }) { Text("Cancel") }
+                TextButton(onClick = {
+                    showAdd = false
+                    pendingLatLng = null
+                    pickingLocation = false
+                }) { Text("Cancel") }
             },
-            title = { Text("Add gym here") },
+            title = { Text("Add gym") },
             text = {
                 Column {
+                    pendingLatLng?.let { ll ->
+                        Text(
+                            "Pinned location: ${"%.5f".format(ll.latitude)}, ${"%.5f".format(ll.longitude)}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+
                     OutlinedTextField(
                         value = gymName,
                         onValueChange = { gymName = it },

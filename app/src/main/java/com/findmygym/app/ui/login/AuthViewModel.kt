@@ -40,14 +40,13 @@ class AuthViewModel(
         password: String,
         fullName: String,
         phone: String,
-        photoBase64: String?,
         onSuccess: () -> Unit
     ) {
         loading = true
         error = null
         viewModelScope.launch {
             try {
-                repo.register(username, password, fullName, phone, photoBase64)
+                repo.register(username, password, fullName, phone)
                 onSuccess()
             } catch (e: Exception) {
                 error = e.message ?: "Registration failed"
@@ -56,4 +55,5 @@ class AuthViewModel(
             }
         }
     }
+
 }

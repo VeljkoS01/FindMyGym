@@ -36,8 +36,7 @@ class AuthRepository(
         usernameRaw: String,
         password: String,
         fullName: String,
-        phone: String,
-        photoBase64: String?
+        phone: String
     ) {
         val username = normalizeUsername(usernameRaw)
 
@@ -74,7 +73,6 @@ class AuthRepository(
                     username = username,
                     fullName = fullName.trim(),
                     phone = phone.trim(),
-                    photoBase64 = photoBase64,
                     points = 0
                 )
                 tx.set(profileRef, profile)
@@ -86,6 +84,7 @@ class AuthRepository(
             throw Exception(e.message ?: "Registration failed")
         }
     }
+
 
     suspend fun getMyProfile(): AppUser? {
         val uid = currentUid() ?: return null
