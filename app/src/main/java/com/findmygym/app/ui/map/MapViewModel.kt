@@ -20,6 +20,9 @@ class MapViewModel(
     var error by mutableStateOf<String?>(null)
         private set
 
+    var query by mutableStateOf("")
+    var radiusKm by mutableStateOf(0) // 0 = no radius filter
+
     init {
         viewModelScope.launch {
             try {
@@ -49,5 +52,39 @@ class MapViewModel(
                 error = e.message ?: "Failed to add gym"
             }
         }
+    }
+
+    fun filteredGyms(myLat: Double?, myLng: Double?): List<Gym> {
+        val q = query.trim().lowercase()
+
+        fun matches(g: Gym): Boolean {
+            if (q.isBlank()) return true
+            return g.name.lowercase().contains(q) ||
+                    g.type.lowercase().contains(q) ||
+                    g.description.lowercase().contains(q) ||
+                    g.authorUsername.lowercase().contains(q)
+        }
+
+        fun withinRadius(g: Gym): Boolean {
+            if (radiusKm <= 0) return true
+            if (myLat == null || myLng == null) return false
+            val dKm = distanceKm(myLat, myLng, g.lat, g.lng)
+            return dKm <= radiusKm.toDouble()
+        }
+
+        return gyms
+            .filter { matches(it) }
+            .filter { withinRadius(it) }
+    }
+
+    private fun distanceKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val r = 6371.0
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2)
+        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        return r * c
     }
 }

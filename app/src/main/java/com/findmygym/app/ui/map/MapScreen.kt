@@ -8,20 +8,24 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.findmygym.app.data.auth.AuthRepository
 import com.findmygym.app.location.LocationTracker
-import com.findmygym.app.nav.Routes
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
 
 @Composable
-fun MapScreen(onGoLeaderboard: () -> Unit) {
+fun MapScreen(
+    onGoLeaderboard: () -> Unit
+) {
     val context = LocalContext.current
-    val tracker = remember { LocationTracker(context) }
+    val tracker = remember(context) { LocationTracker(context) }
     val authRepo = remember { AuthRepository() }
     val vm: MapViewModel = viewModel()
 
@@ -29,13 +33,14 @@ fun MapScreen(onGoLeaderboard: () -> Unit) {
     var myLatLng by remember { mutableStateOf<LatLng?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    // Add gym dialog state
+    // Marker -> open actions dialog (rating + comment)
+    var selectedGymId by remember { mutableStateOf<String?>(null) }
+
+    // Add gym dialog
     var showAdd by remember { mutableStateOf(false) }
     var gymName by remember { mutableStateOf("") }
     var gymType by remember { mutableStateOf("Gym") }
     var gymDesc by remember { mutableStateOf("") }
-
-    var selectedGymId by remember { mutableStateOf<String?>(null) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -55,31 +60,33 @@ fun MapScreen(onGoLeaderboard: () -> Unit) {
         )
     }
 
-    val fallback = LatLng(43.3209, 21.8958)
+    val fallback = LatLng(43.3209, 21.8958) // Nis
     val cameraPositionState = rememberCameraPositionState {
         position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(fallback, 14f)
     }
 
-    // Live updates + periodic Firestore update
+    // Live updates + periodic Firestore location update (every 10s)
     LaunchedEffect(hasPermission) {
         if (!hasPermission) return@LaunchedEffect
         error = null
 
         var lastSentMs = 0L
-
         try {
             tracker.locationUpdates().collectLatest { loc ->
                 val ll = LatLng(loc.latitude, loc.longitude)
                 myLatLng = ll
+
                 cameraPositionState.position =
                     com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(ll, 16f)
 
                 val now = System.currentTimeMillis()
-                if (now - lastSentMs >= 10_000) { // every 10s
+                if (now - lastSentMs >= 10_000) {
                     lastSentMs = now
                     try {
                         authRepo.updateMyLocation(loc.latitude, loc.longitude)
-                    } catch (_: Exception) {}
+                    } catch (_: Exception) {
+                        // ignore silent fail
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -87,12 +94,46 @@ fun MapScreen(onGoLeaderboard: () -> Unit) {
         }
     }
 
-    Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            (error ?: vm.error)?.let {
-                Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(12.dp))
-            }
+    val my = myLatLng
+    val filtered = vm.filteredGyms(my?.latitude, my?.longitude)
 
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+    ) {
+        // Errors
+        (error ?: vm.error)?.let {
+            Text(
+                it,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+            )
+        }
+
+        // Search + radius
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+            OutlinedTextField(
+                value = vm.query,
+                onValueChange = { vm.query = it },
+                label = { Text("Search gyms") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            RadiusDropdown(
+                radiusKm = vm.radiusKm,
+                onChange = { vm.radiusKm = it }
+            )
+        }
+
+        // Map (takes remaining space)
+        Box(modifier = Modifier.weight(1f)) {
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
@@ -102,12 +143,11 @@ fun MapScreen(onGoLeaderboard: () -> Unit) {
                     Marker(state = MarkerState(position = it), title = "You")
                 }
 
-                // Gyms markers
-                vm.gyms.forEach { g ->
+                filtered.forEach { g ->
                     Marker(
                         state = MarkerState(position = LatLng(g.lat, g.lng)),
                         title = g.name,
-                        snippet = "${g.type} • by ${g.authorUsername}",
+                        snippet = "${g.type} • ⭐ ${"%.1f".format(g.avgRating)} (${g.ratingCount})",
                         onClick = {
                             selectedGymId = g.id
                             true
@@ -115,33 +155,62 @@ fun MapScreen(onGoLeaderboard: () -> Unit) {
                     )
                 }
             }
+
+            // Leaderboard FAB (left)
+            FloatingActionButton(
+                onClick = onGoLeaderboard,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp)
+            ) {
+                Text("🏆")
+            }
+
+            // Add gym FAB (right)
+            FloatingActionButton(
+                onClick = {
+                    if (myLatLng == null) {
+                        error = "No location yet."
+                    } else {
+                        showAdd = true
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+            ) {
+                Text("+")
+            }
         }
 
-        FloatingActionButton(
-            onClick = {
-                if (myLatLng == null) {
-                    error = "No location yet."
-                } else {
-                    showAdd = true
+        // Results list (mini table)
+        if (filtered.isNotEmpty()) {
+            Divider()
+            Text(
+                "Results (${filtered.size})",
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.titleSmall
+            )
+
+            filtered.take(10).forEach { g ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(g.name)
+                        Text(g.type, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Text("⭐ ${"%.1f".format(g.avgRating)}", style = MaterialTheme.typography.bodySmall)
                 }
-            },
-            modifier = Modifier
-                .align(androidx.compose.ui.Alignment.BottomEnd)
-                .padding(16.dp)
-        ) {
-            Text("+")
-        }
-
-        FloatingActionButton(
-            onClick = onGoLeaderboard,
-            modifier = Modifier
-                .align(androidx.compose.ui.Alignment.BottomStart)
-                .padding(16.dp)
-        ) {
-            Text("🏆")
+                Divider()
+            }
         }
     }
 
+    // Add gym dialog
     if (showAdd) {
         AlertDialog(
             onDismissRequest = { showAdd = false },
@@ -195,6 +264,7 @@ fun MapScreen(onGoLeaderboard: () -> Unit) {
         )
     }
 
+    // Comment + Rating dialog
     selectedGymId?.let { gymId ->
         CommentDialog(
             gymId = gymId,
