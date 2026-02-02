@@ -6,6 +6,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.findmygym.app.ui.components.fmgTextFieldTextStyle
+
 
 @Composable
 fun RadiusDropdown(
@@ -20,18 +22,16 @@ fun RadiusDropdown(
     Column(Modifier.fillMaxWidth()) {
 
         Box(Modifier.fillMaxWidth()) {
-            // Disabled field (doesn't consume clicks/focus)
             OutlinedTextField(
                 value = label,
                 onValueChange = {},
                 label = { Text("Radius") },
                 readOnly = true,
-                enabled = false,
+                textStyle = fmgTextFieldTextStyle(),
                 modifier = Modifier.fillMaxWidth(),
                 trailingIcon = { Text("▼") }
             )
 
-            // Transparent clickable overlay
             Box(
                 modifier = Modifier
                     .matchParentSize()

@@ -19,6 +19,8 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import com.findmygym.app.ui.components.fmgTextFieldTextStyle
+
 
 @Composable
 fun MapScreen(
@@ -166,6 +168,7 @@ fun MapScreen(
                 value = vm.query,
                 onValueChange = { vm.query = it },
                 label = { Text("Search gyms") },
+                textStyle = fmgTextFieldTextStyle(),
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(8.dp))
@@ -339,6 +342,7 @@ fun MapScreen(
                         value = gymName,
                         onValueChange = { gymName = it },
                         label = { Text("Name") },
+                        textStyle = fmgTextFieldTextStyle(),
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(Modifier.height(8.dp))
@@ -346,6 +350,7 @@ fun MapScreen(
                         value = gymType,
                         onValueChange = { gymType = it },
                         label = { Text("Type") },
+                        textStyle = fmgTextFieldTextStyle(),
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(Modifier.height(8.dp))
@@ -353,6 +358,7 @@ fun MapScreen(
                         value = gymDesc,
                         onValueChange = { gymDesc = it },
                         label = { Text("Description") },
+                        textStyle = fmgTextFieldTextStyle(),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

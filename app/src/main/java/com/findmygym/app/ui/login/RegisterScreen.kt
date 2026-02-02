@@ -11,6 +11,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.findmygym.app.ui.components.fmgTextFieldTextStyle
+
 
 @Composable
 fun RegisterScreen(
@@ -47,6 +49,7 @@ fun RegisterScreen(
                 value = fullName,
                 onValueChange = { fullName = it },
                 label = { Text("Full Name") },
+                textStyle = fmgTextFieldTextStyle(),
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(10.dp))
@@ -55,6 +58,7 @@ fun RegisterScreen(
                 value = email,
                 onValueChange = { email = it },
                 label = { Text("E-mail") },
+                textStyle = fmgTextFieldTextStyle(),
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(10.dp))
@@ -63,6 +67,7 @@ fun RegisterScreen(
                 value = password,
                 onValueChange = { password = it },
                 label = { Text("Password (min 6)") },
+                textStyle = fmgTextFieldTextStyle(),
                 visualTransformation = if (passVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(onClick = { passVisible = !passVisible }) {
@@ -80,6 +85,7 @@ fun RegisterScreen(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
                 label = { Text("Confirm Password") },
+                textStyle = fmgTextFieldTextStyle(),
                 visualTransformation = if (confirmVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(onClick = { confirmVisible = !confirmVisible }) {
@@ -97,6 +103,7 @@ fun RegisterScreen(
                 value = phone,
                 onValueChange = { phone = it },
                 label = { Text("Phone Number") },
+                textStyle = fmgTextFieldTextStyle(),
                 modifier = Modifier.fillMaxWidth()
             )
 

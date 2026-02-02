@@ -13,6 +13,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.findmygym.app.data.auth.RememberMeStore
+import com.findmygym.app.ui.components.fmgTextFieldTextStyle
+
 
 @Composable
 fun LoginScreen(
@@ -50,14 +52,17 @@ fun LoginScreen(
                 value = email,
                 onValueChange = { email = it },
                 label = { Text("Email") },
+                textStyle = fmgTextFieldTextStyle(),
                 modifier = Modifier.fillMaxWidth()
             )
+
             Spacer(Modifier.height(10.dp))
 
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
                 label = { Text("Password") },
+                textStyle = fmgTextFieldTextStyle(),
                 visualTransformation = if (passVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(onClick = { passVisible = !passVisible }) {
