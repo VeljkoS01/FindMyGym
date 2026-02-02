@@ -54,11 +54,12 @@ class GymsRepository(
                 lat = lat,
                 lng = lng,
                 authorUid = uid,
-                authorUsername = me.username,
+                authorUsername = me.fullName.ifBlank { me.email },
                 createdAt = System.currentTimeMillis(),
                 avgRating = 0.0,
                 ratingCount = 0
             )
+
 
             tx.set(gymRef, gym)
 
@@ -102,10 +103,11 @@ class GymsRepository(
                 id = commentRef.id,
                 gymId = gymId,
                 authorUid = uid,
-                authorUsername = me.username,
+                authorUsername = me.fullName.ifBlank { me.email },
                 text = text.trim(),
                 createdAt = System.currentTimeMillis()
             )
+
 
             tx.set(commentRef, c)
 

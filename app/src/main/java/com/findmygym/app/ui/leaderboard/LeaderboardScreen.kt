@@ -42,7 +42,7 @@ fun LeaderboardScreen(onBack: () -> Unit) {
                     Row(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
                         Text("#${idx + 1}", modifier = Modifier.width(48.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(u.username)
+                            Text(u.fullName.ifBlank { u.email })
                             if (u.fullName.isNotBlank()) {
                                 Text(u.fullName, style = MaterialTheme.typography.bodySmall)
                             }

@@ -32,6 +32,9 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyC1_DejYKWD7x0P9Vz2w75WKidUlnGSMmM" />
 
+        <uses-library
+            android:name="org.apache.http.legacy"
+            android:required="false" />
     </application>
 
 </manifest>

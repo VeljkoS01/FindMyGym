@@ -1,12 +1,13 @@
 package com.findmygym.app.ui.login
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.findmygym.app.data.auth.AuthRepository
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.findmygym.app.data.auth.RememberMeStore
 
 class AuthViewModel(
     private val repo: AuthRepository = AuthRepository()
@@ -20,12 +21,12 @@ class AuthViewModel(
 
     fun clearError() { error = null }
 
-    fun login(username: String, password: String, onSuccess: () -> Unit) {
+    fun login(email: String, password: String, onSuccess: () -> Unit) {
         loading = true
         error = null
         viewModelScope.launch {
             try {
-                repo.login(username, password)
+                repo.login(email, password)
                 onSuccess()
             } catch (e: Exception) {
                 error = e.message ?: "Login failed"
@@ -36,7 +37,7 @@ class AuthViewModel(
     }
 
     fun register(
-        username: String,
+        email: String,
         password: String,
         fullName: String,
         phone: String,
@@ -46,7 +47,7 @@ class AuthViewModel(
         error = null
         viewModelScope.launch {
             try {
-                repo.register(username, password, fullName, phone)
+                repo.register(email, password, fullName, phone)
                 onSuccess()
             } catch (e: Exception) {
                 error = e.message ?: "Registration failed"
@@ -56,4 +57,9 @@ class AuthViewModel(
         }
     }
 
+    fun setRememberMe(store: RememberMeStore, value: Boolean) {
+        viewModelScope.launch {
+            store.setRememberMe(value)
+        }
+    }
 }

@@ -35,7 +35,6 @@ fun MapScreen(
 
     var selectedGymId by remember { mutableStateOf<String?>(null) }
 
-    // add gym dialog state
     var showAdd by remember { mutableStateOf(false) }
     var gymName by remember { mutableStateOf("") }
     var gymType by remember { mutableStateOf("Gym") }
@@ -81,7 +80,6 @@ fun MapScreen(
         position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(fallback, 13f)
     }
 
-    // live location tracking (still used for "You" marker and notifications)
     LaunchedEffect(hasLocationPermission) {
         if (!hasLocationPermission) return@LaunchedEffect
         localError = null
@@ -109,7 +107,6 @@ fun MapScreen(
         }
     }
 
-    // nearby notifications
     var lastNotifiedGymId by remember { mutableStateOf<String?>(null) }
     var lastNotifiedAt by remember { mutableStateOf(0L) }
 
@@ -184,7 +181,6 @@ fun MapScreen(
                 cameraPositionState = cameraPositionState,
                 properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
 
-                // ✅ when + mode is ON, user taps map to place the pin
                 onMapClick = { ll ->
                     if (pickingLocation) {
                         pendingLatLng = ll
@@ -193,7 +189,6 @@ fun MapScreen(
                     }
                 },
 
-                // optional: long press also works
                 onMapLongClick = { ll ->
                     if (pickingLocation) {
                         pendingLatLng = ll
@@ -203,7 +198,6 @@ fun MapScreen(
                 }
             ) {
 
-                // pending marker (selected location for new gym)
                 pendingLatLng?.let { ll ->
                     Marker(
                         state = MarkerState(position = ll),
@@ -211,7 +205,6 @@ fun MapScreen(
                     )
                 }
 
-                // gyms markers
                 filtered.forEach { g ->
                     Marker(
                         state = MarkerState(position = LatLng(g.lat, g.lng)),
