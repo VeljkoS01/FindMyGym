@@ -8,6 +8,8 @@ import com.findmygym.app.ui.leaderboard.LeaderboardScreen
 import com.findmygym.app.ui.login.LoginScreen
 import com.findmygym.app.ui.login.RegisterScreen
 import com.findmygym.app.ui.map.MapScreen
+import com.findmygym.app.ui.splash.SplashScreen
+
 
 @Composable
 fun AppNav() {
@@ -15,8 +17,24 @@ fun AppNav() {
 
     NavHost(
         navController = nav,
-        startDestination = Routes.LOGIN
+        startDestination = Routes.SPLASH
     ) {
+        composable(Routes.SPLASH) {
+            SplashScreen(
+                onGoLogin = {
+                    nav.navigate(Routes.LOGIN) {
+                        popUpTo(Routes.SPLASH) { inclusive = true }
+                    }
+                },
+                onGoMap = {
+                    nav.navigate(Routes.MAP) {
+                        popUpTo(Routes.SPLASH) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+
         composable(Routes.LOGIN) {
             LoginScreen(
                 onGoRegister = { nav.navigate(Routes.REGISTER) },
