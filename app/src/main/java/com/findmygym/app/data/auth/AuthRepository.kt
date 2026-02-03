@@ -1,6 +1,5 @@
 package com.findmygym.app.data.auth
 
-import android.util.Log
 import com.findmygym.app.data.model.AppUser
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
@@ -14,7 +13,6 @@ class AuthRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
-    private val TAG = "AuthRepository"
 
     fun isLoggedIn(): Boolean = auth.currentUser != null
     fun currentUid(): String? = auth.currentUser?.uid
@@ -23,6 +21,7 @@ class AuthRepository(
     suspend fun login(emailRaw: String, password: String) {
         val email = emailRaw.trim()
         if (email.isBlank()) throw Exception("Please enter your email")
+
         auth.signInWithEmailAndPassword(email, password).await()
         ensureUserDocExists()
     }
@@ -42,26 +41,26 @@ class AuthRepository(
 
         val result = auth.createUserWithEmailAndPassword(email, password).await()
         val user = result.user ?: throw Exception("Error: no user")
-        val uid = user.uid
 
         val profile = AppUser(
-            uid = uid,
+            uid = user.uid,
             email = email,
             fullName = fullName.trim(),
             phone = phone.trim(),
             points = 0
         )
 
-        db.collection("users").document(uid).set(profile).await()
+        db.collection("users").document(user.uid).set(profile).await()
     }
 
     suspend fun getMyProfile(): AppUser? {
         val uid = currentUid() ?: return null
+
         val ref = db.collection("users").document(uid)
         val snap = ref.get().await()
 
         if (!snap.exists()) {
-            val email = auth.currentUser?.email ?: ""
+            val email = auth.currentUser?.email.orEmpty()
             val repaired = AppUser(
                 uid = uid,
                 email = email,
@@ -78,6 +77,7 @@ class AuthRepository(
 
     suspend fun updateMyLocation(lat: Double, lng: Double) {
         val uid = currentUid() ?: return
+
         db.collection("users").document(uid).set(
             mapOf(
                 "lastLat" to lat,
@@ -91,13 +91,14 @@ class AuthRepository(
     suspend fun reauthenticateWithPassword(password: String) {
         val user = auth.currentUser ?: throw Exception("Not logged in")
         val email = user.email ?: throw Exception("No email for current user")
+
         val cred = EmailAuthProvider.getCredential(email, password)
         user.reauthenticate(cred).await()
     }
 
     private fun asInt(value: Any?): Int = when (value) {
-        is Long -> value.toInt()
         is Int -> value
+        is Long -> value.toInt()
         is Double -> value.toInt()
         is Float -> value.toInt()
         is Number -> value.toInt()
@@ -115,36 +116,33 @@ class AuthRepository(
         }
     }
 
+    /* Brise korisnika kao i sve teretane koje je on napravio, ocene i komentare na toj/tim teretani
+    i sve ocene i komentare koje je korisnik ostavio na drugim teretanama */
     suspend fun deleteAccountAndData() {
         val user = auth.currentUser ?: throw Exception("Not logged in")
         val uid = user.uid
 
-        val myGymsSnap = try {
-            db.collection("gyms")
-                .whereEqualTo("authorUid", uid)
-                .get(Source.SERVER).await()
-        } catch (e: Exception) {
-            throw Exception("Delete failed at: loading my gyms. ${e.message}")
-        }
+        // 0) Moji gyms
+        val myGymsSnap = db.collection("gyms")
+            .whereEqualTo("authorUid", uid)
+            .get(Source.SERVER).await()
 
         val myGymRefs = myGymsSnap.documents.map { it.reference }
         val myGymIds = myGymsSnap.documents.map { it.id }.toHashSet()
 
-        val allGymsSnap = try {
-            db.collection("gyms").get(Source.SERVER).await()
-        } catch (e: Exception) {
-            throw Exception("Delete failed at: loading gyms. ${e.message}")
-        }
+        // Sve gyms (treba nam da ocistimo moje comments/ratings svuda)
+        val allGymsSnap = db.collection("gyms").get(Source.SERVER).await()
 
-        Log.d(TAG, "deleteAccount: myGyms=${myGymIds.size}, allGyms=${allGymsSnap.size()}")
-
+        // 1) Obrisi moje ratings na tudjim gyms + preracunaj prosek
         try {
             for (gymDoc in allGymsSnap.documents) {
                 val gymId = gymDoc.id
                 val gymRef = gymDoc.reference
 
+                // moje gyms brisemo kasnije cele
                 if (myGymIds.contains(gymId)) continue
 
+                // ratingId == uid (po tvojim pravilima)
                 val ratingRef = gymRef.collection("ratings").document(uid)
                 val ratingSnap = ratingRef.get(Source.SERVER).await()
                 if (!ratingSnap.exists()) continue
@@ -152,6 +150,7 @@ class AuthRepository(
                 db.runTransaction { tx ->
                     val gSnap = tx.get(gymRef)
                     val rSnap = tx.get(ratingRef)
+
                     if (!gSnap.exists() || !rSnap.exists()) return@runTransaction null
 
                     val value = asInt(rSnap.get("value"))
@@ -164,10 +163,13 @@ class AuthRepository(
                         else ((oldAvg * oldCount.toDouble()) - value.toDouble()) / newCount.toDouble()
 
                     tx.delete(ratingRef)
-                    tx.update(gymRef, mapOf(
-                        "avgRating" to newAvg,
-                        "ratingCount" to newCount
-                    ))
+                    tx.update(
+                        gymRef,
+                        mapOf(
+                            "avgRating" to newAvg,
+                            "ratingCount" to newCount
+                        )
+                    )
                     null
                 }.await()
             }
@@ -175,6 +177,7 @@ class AuthRepository(
             throw Exception("Delete failed at: my ratings. ${e.message}")
         }
 
+        // 2) Obrisi moje comments na svim gyms
         try {
             for (gymDoc in allGymsSnap.documents) {
                 val gymRef = gymDoc.reference
@@ -197,6 +200,7 @@ class AuthRepository(
             throw Exception("Delete failed at: my comments. ${e.message}")
         }
 
+        // 3) Obrisi moje gyms + njihove subkolekcije, pa gym doc
         try {
             for (gymRef in myGymRefs) {
                 deleteCollectionInBatches(gymRef.collection("ratings"))
@@ -207,12 +211,14 @@ class AuthRepository(
             throw Exception("Delete failed at: my gyms cleanup. ${e.message}")
         }
 
+        // 4) users/{uid}
         try {
             db.collection("users").document(uid).delete().await()
         } catch (e: Exception) {
             throw Exception("Delete failed at: user doc. ${e.message}")
         }
 
+        // 5) Auth user
         try {
             user.delete().await()
         } catch (e: Exception) {
@@ -222,11 +228,12 @@ class AuthRepository(
 
     private suspend fun ensureUserDocExists() {
         val uid = currentUid() ?: return
+
         val ref = db.collection("users").document(uid)
         val snap = ref.get().await()
         if (snap.exists()) return
 
-        val email = auth.currentUser?.email ?: ""
+        val email = auth.currentUser?.email.orEmpty()
         val repaired = AppUser(
             uid = uid,
             email = email,
