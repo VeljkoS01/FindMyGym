@@ -43,29 +43,21 @@ fun MapScreen(
     var myLatLng by remember { mutableStateOf<LatLng?>(null) }
     var localError by remember { mutableStateOf<String?>(null) }
 
-    // smooth map behavior
     var hasCenteredOnMe by remember { mutableStateOf(false) }
 
-    // gym marker dialog (for now marker click only)
     var selectedGymId by remember { mutableStateOf<String?>(null) }
 
-    // add gym dialog state
     var showAdd by remember { mutableStateOf(false) }
     var gymName by remember { mutableStateOf("") }
     var gymType by remember { mutableStateOf("Gym") }
     var gymDesc by remember { mutableStateOf("") }
 
-    // picking mode + pending pin
     var pickingLocation by remember { mutableStateOf(false) }
     var pendingLatLng by remember { mutableStateOf<LatLng?>(null) }
 
-    // gym list popup
     var showGymList by remember { mutableStateOf(false) }
-
-    // filters popup
     var showFilters by remember { mutableStateOf(false) }
 
-    // notifications permission (Android 13+)
     var notifPermissionOk by remember { mutableStateOf(Build.VERSION.SDK_INT < 33) }
 
     val notifLauncher = rememberLauncherForActivityResult(
@@ -96,7 +88,6 @@ fun MapScreen(
         }
     }
 
-    // open gym list when requested from drawer
     LaunchedEffect(requestGymList) {
         if (requestGymList) {
             showGymList = true
@@ -104,7 +95,6 @@ fun MapScreen(
         }
     }
 
-    // open filters when requested from top-right icon
     LaunchedEffect(requestFilters) {
         if (requestFilters) {
             showFilters = true
@@ -112,10 +102,8 @@ fun MapScreen(
         }
     }
 
-    // start add gym picking mode from drawer
     LaunchedEffect(requestAddGym) {
         if (requestAddGym) {
-            // reset + enter picking mode
             localError = null
             pendingLatLng = null
             pickingLocation = true
@@ -129,7 +117,6 @@ fun MapScreen(
         position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(fallback, 13f)
     }
 
-    // location updates: UI throttled + center only once + send to backend every 10s
     LaunchedEffect(hasLocationPermission) {
         if (!hasLocationPermission) return@LaunchedEffect
         localError = null
@@ -142,7 +129,7 @@ fun MapScreen(
                 val ll = LatLng(loc.latitude, loc.longitude)
 
                 val now = System.currentTimeMillis()
-                if (now - lastUiUpdateMs >= 1000) { // UI update max 1/sec
+                if (now - lastUiUpdateMs >= 1000) {
                     myLatLng = ll
                     lastUiUpdateMs = now
                 }
@@ -165,7 +152,6 @@ fun MapScreen(
         }
     }
 
-    // nearby gym notification loop
     var lastNotifiedGymId by remember { mutableStateOf<String?>(null) }
     var lastNotifiedAt by remember { mutableStateOf(0L) }
 
@@ -279,7 +265,6 @@ fun MapScreen(
         }
     }
 
-    // Gym list popup: select -> ONLY move camera (no dialog)
     if (showGymList) {
         GymListDialog(
             gyms = vm.gyms,
@@ -301,7 +286,6 @@ fun MapScreen(
         )
     }
 
-    // Filters dialog (name + radius) + Clear
     if (showFilters) {
         MapFiltersDialog(
             initialQuery = vm.query,
@@ -399,9 +383,10 @@ fun MapScreen(
         )
     }
 
-    selectedGymId?.let { gymId ->
-        CommentDialog(
-            gymId = gymId,
+    val selectedGym = vm.gyms.firstOrNull { it.id == selectedGymId }
+    selectedGym?.let { g ->
+        GymDetailsDialog(
+            gym = g,
             onClose = { selectedGymId = null }
         )
     }

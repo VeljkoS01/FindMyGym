@@ -1,0 +1,172 @@
+package com.findmygym.app.ui.map
+
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.findmygym.app.data.gyms.GymsRepository
+import com.findmygym.app.data.model.Gym
+import com.findmygym.app.data.model.GymComment
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
+
+@Composable
+fun GymDetailsDialog(
+    gym: Gym,
+    onClose: () -> Unit
+) {
+    val repo = remember { GymsRepository() }
+    val scope = rememberCoroutineScope()
+
+    val comments by repo.streamComments(gym.id).collectAsState(initial = emptyList())
+
+    var hasRated by remember { mutableStateOf<Boolean?>(null) }
+    var ratingSending by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    var showAllComments by remember { mutableStateOf(false) }
+
+    LaunchedEffect(gym.id) {
+        hasRated = null
+        error = null
+        try {
+            hasRated = repo.hasMyRating(gym.id)
+        } catch (_: Exception) {
+            hasRated = false
+        }
+    }
+
+    val preview: List<GymComment> = remember(comments) {
+        comments.takeLast(3).reversed()
+    }
+
+    val allSorted: List<GymComment> = remember(comments) {
+        comments.reversed()
+    }
+
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(gym.name.ifBlank { "Gym" }) },
+        text = {
+            Column {
+                Text(gym.type.ifBlank { "Gym" }, style = MaterialTheme.typography.bodySmall)
+
+                if (gym.description.isNotBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(gym.description)
+                }
+
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "⭐ ${"%.1f".format(gym.avgRating)}  (${gym.ratingCount})",
+                    style = MaterialTheme.typography.titleSmall
+                )
+
+                Spacer(Modifier.height(14.dp))
+
+                when (hasRated) {
+                    null -> {
+                        Text("Checking rating...", style = MaterialTheme.typography.bodySmall)
+                    }
+                    true -> {
+                        Text("You already rated this gym.", style = MaterialTheme.typography.bodySmall)
+                    }
+                    false -> {
+                        Text("Rate this gym", style = MaterialTheme.typography.titleSmall)
+                        Spacer(Modifier.height(6.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            (1..5).forEach { v ->
+                                OutlinedButton(
+                                    enabled = !ratingSending,
+                                    onClick = {
+                                        error = null
+                                        ratingSending = true
+                                        scope.launch {
+                                            try {
+                                                repo.rateGym(gym.id, v)
+                                                hasRated = true
+                                            } catch (e: Exception) {
+                                                error = e.message ?: "Failed to rate"
+                                            } finally {
+                                                ratingSending = false
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.size(44.dp),
+                                    contentPadding = PaddingValues(0.dp)
+                                ) { Text("$v") }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                Text("Comments", style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(6.dp))
+
+                if (comments.isEmpty()) {
+                    Text("No comments yet.", style = MaterialTheme.typography.bodySmall)
+                } else {
+                    if (!showAllComments) {
+                        preview.forEach { c ->
+                            CommentRow(c)
+                            Spacer(Modifier.height(6.dp))
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 320.dp)
+                        ) {
+                            items(allSorted) { c ->
+                                CommentRow(c)
+                                Spacer(Modifier.height(10.dp))
+                                Divider()
+                                Spacer(Modifier.height(10.dp))
+                            }
+                        }
+                    }
+                }
+
+                TextButton(
+                    onClick = { showAllComments = !showAllComments },
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text(if (showAllComments) "Hide" else "Show all")
+                }
+
+                error?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(it, color = MaterialTheme.colorScheme.error)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onClose) { Text("Close") }
+        }
+    )
+}
+
+@Composable
+private fun CommentRow(c: GymComment) {
+    val sdf = remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()) }
+    val date = remember(c.createdAt) { sdf.format(Date(c.createdAt)) }
+
+    Column {
+        Text(
+            c.authorUsername.ifBlank { "User" },
+            style = MaterialTheme.typography.bodySmall
+        )
+        Text(c.text)
+        Text(date, style = MaterialTheme.typography.bodySmall)
+    }
+}

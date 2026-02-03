@@ -20,7 +20,6 @@ import com.findmygym.app.ui.splash.SplashScreen
 fun AppNav() {
     val nav = rememberNavController()
 
-    // Global triggers for MapScreen UI
     var requestGymList by rememberSaveable { mutableStateOf(false) }
     var requestFilters by rememberSaveable { mutableStateOf(false) }
     var requestAddGym by rememberSaveable { mutableStateOf(false) }
@@ -76,24 +75,18 @@ fun AppNav() {
             AppDrawerScaffold(
                 title = "Map",
                 currentRoute = Routes.MAP,
-
-                // left menu navigation
+                onGoMap = { nav.navigate(Routes.MAP) { launchSingleTop = true } },
                 onGoProfile = { nav.navigate(Routes.PROFILE) { launchSingleTop = true } },
                 onGoLeaderboard = { nav.navigate(Routes.LEADERBOARD) { launchSingleTop = true } },
-
-                // actions that should happen on map
                 onGoGymList = { requestGymList = true },
                 onGoAddGym = { requestAddGym = true },
-
-                // top-right icon only on map
-                onOpenFilters = { requestFilters = true },
-
                 onLogout = {
                     authRepo.logout()
                     nav.navigate(Routes.SPLASH) {
                         popUpTo(nav.graph.id) { inclusive = true }
                     }
-                }
+                },
+                onOpenFilters = { requestFilters = true }
             ) { inner ->
                 MapScreen(
                     modifier = Modifier.padding(inner),
@@ -113,11 +106,12 @@ fun AppNav() {
             AppDrawerScaffold(
                 title = "Leaderboard",
                 currentRoute = Routes.LEADERBOARD,
+                onGoMap = { nav.navigate(Routes.MAP) { launchSingleTop = true } },
+
 
                 onGoProfile = { nav.navigate(Routes.PROFILE) { launchSingleTop = true } },
                 onGoLeaderboard = { nav.navigate(Routes.LEADERBOARD) { launchSingleTop = true } },
 
-                // from leaderboard: go to map + trigger
                 onGoGymList = {
                     requestGymList = true
                     goToMap()
@@ -127,7 +121,6 @@ fun AppNav() {
                     goToMap()
                 },
 
-                // no filter icon here
                 onOpenFilters = null,
 
                 onLogout = {
@@ -147,11 +140,12 @@ fun AppNav() {
             AppDrawerScaffold(
                 title = "Profile",
                 currentRoute = Routes.PROFILE,
+                onGoMap = { nav.navigate(Routes.MAP) { launchSingleTop = true } },
+
 
                 onGoProfile = { nav.navigate(Routes.PROFILE) { launchSingleTop = true } },
                 onGoLeaderboard = { nav.navigate(Routes.LEADERBOARD) { launchSingleTop = true } },
 
-                // from profile: go to map + trigger
                 onGoGymList = {
                     requestGymList = true
                     goToMap()
@@ -161,7 +155,6 @@ fun AppNav() {
                     goToMap()
                 },
 
-                // no filter icon here
                 onOpenFilters = null,
 
                 onLogout = {

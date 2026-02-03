@@ -148,4 +148,13 @@ class GymsRepository(
             null
         }.await()
     }
+
+    suspend fun hasMyRating(gymId: String): Boolean {
+        val uid = authRepo.currentUid() ?: return false
+        val snap = db.collection("gyms").document(gymId)
+            .collection("ratings").document(uid)
+            .get().await()
+        return snap.exists()
+    }
+
 }
