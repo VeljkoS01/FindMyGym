@@ -34,9 +34,15 @@ fun AppNav() {
     fun focusGymOnMap(lat: Double, lng: Double) {
         focusLat = lat
         focusLng = lng
-        nav.navigate(Routes.MAP) { launchSingleTop = true }
+        goToMap()
     }
 
+    fun goToSplashClearBackstack() {
+        nav.navigate(Routes.SPLASH) {
+            popUpTo(nav.graph.id) { inclusive = true }
+            launchSingleTop = true
+        }
+    }
 
     NavHost(
         navController = nav,
@@ -85,22 +91,19 @@ fun AppNav() {
             AppDrawerScaffold(
                 title = "Map",
                 currentRoute = Routes.MAP,
+
                 onGoMap = { nav.navigate(Routes.MAP) { launchSingleTop = true } },
                 onGoProfile = { nav.navigate(Routes.PROFILE) { launchSingleTop = true } },
                 onGoLeaderboard = { nav.navigate(Routes.LEADERBOARD) { launchSingleTop = true } },
 
-                // actions on map
                 onGoGymList = { requestGymList = true },
                 onGoAddGym = { requestAddGym = true },
 
-                // top-right icon only on map
                 onOpenFilters = { requestFilters = true },
 
                 onLogout = {
                     authRepo.logout()
-                    nav.navigate(Routes.SPLASH) {
-                        popUpTo(nav.graph.id) { inclusive = true }
-                    }
+                    goToSplashClearBackstack()
                 }
             ) { inner ->
                 MapScreen(
@@ -111,6 +114,7 @@ fun AppNav() {
                     onRequestFiltersConsumed = { requestFilters = false },
                     requestAddGym = requestAddGym,
                     onRequestAddGymConsumed = { requestAddGym = false },
+
                     focusLat = focusLat,
                     focusLng = focusLng,
                     onFocusConsumed = {
@@ -127,6 +131,7 @@ fun AppNav() {
             AppDrawerScaffold(
                 title = "Leaderboard",
                 currentRoute = Routes.LEADERBOARD,
+
                 onGoMap = { goToMap() },
                 onGoProfile = { nav.navigate(Routes.PROFILE) { launchSingleTop = true } },
                 onGoLeaderboard = { nav.navigate(Routes.LEADERBOARD) { launchSingleTop = true } },
@@ -144,9 +149,7 @@ fun AppNav() {
 
                 onLogout = {
                     authRepo.logout()
-                    nav.navigate(Routes.SPLASH) {
-                        popUpTo(nav.graph.id) { inclusive = true }
-                    }
+                    goToSplashClearBackstack()
                 }
             ) { inner ->
                 LeaderboardScreen(modifier = Modifier.padding(inner))
@@ -159,6 +162,7 @@ fun AppNav() {
             AppDrawerScaffold(
                 title = "Profile",
                 currentRoute = Routes.PROFILE,
+
                 onGoMap = { goToMap() },
                 onGoProfile = { nav.navigate(Routes.PROFILE) { launchSingleTop = true } },
                 onGoLeaderboard = { nav.navigate(Routes.LEADERBOARD) { launchSingleTop = true } },
@@ -176,16 +180,14 @@ fun AppNav() {
 
                 onLogout = {
                     authRepo.logout()
-                    nav.navigate(Routes.SPLASH) {
-                        popUpTo(nav.graph.id) { inclusive = true }
-                    }
+                    goToSplashClearBackstack()
                 }
             ) { inner ->
                 ProfileScreen(
                     modifier = Modifier.padding(inner),
-                    onFocusGym = { lat, lng -> focusGymOnMap(lat, lng) }
+                    onFocusGym = { lat, lng -> focusGymOnMap(lat, lng) },
+                    onAccountDeleted = { goToSplashClearBackstack() }
                 )
-
             }
         }
     }

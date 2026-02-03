@@ -36,7 +36,6 @@ fun AllCommentsDialog(
                         .fillMaxWidth()
                         .heightIn(max = 360.dp)
                 ) {
-                    // prikazi najnovije prvo
                     items(comments.reversed()) { c ->
                         Text(c.authorUsername.ifBlank { "User" }, style = MaterialTheme.typography.bodySmall)
                         Text(c.text)

@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import com.google.firebase.firestore.SetOptions
+
 
 class GymsRepository(
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
@@ -72,7 +74,8 @@ class GymsRepository(
             tx.set(gymRef, gym)
 
             val userRef = db.collection("users").document(uid)
-            tx.update(userRef, "points", FieldValue.increment(5))
+            tx.set(userRef, mapOf("points" to FieldValue.increment(5)), SetOptions.merge())
+
 
             null
         }.await()
@@ -119,7 +122,8 @@ class GymsRepository(
             tx.set(commentRef, c)
 
             val userRef = db.collection("users").document(uid)
-            tx.update(userRef, "points", FieldValue.increment(2))
+            tx.set(userRef, mapOf("points" to FieldValue.increment(2)), SetOptions.merge())
+
 
             null
         }.await()
@@ -129,6 +133,7 @@ class GymsRepository(
         require(value in 1..5) { "Rating must be 1..5" }
 
         val uid = authRepo.currentUid() ?: throw Exception("Not logged in")
+        val me = authRepo.getMyProfile()
 
         val gymRef = db.collection("gyms").document(gymId)
         val ratingRef = gymRef.collection("ratings").document(uid)
@@ -137,6 +142,10 @@ class GymsRepository(
         db.runTransaction { tx ->
             val ratingSnap = tx.get(ratingRef)
             val gymSnap = tx.get(gymRef)
+
+            if (!gymSnap.exists()) {
+                throw IllegalStateException("Gym not found")
+            }
 
             if (ratingSnap.exists()) {
                 throw IllegalStateException("You already rated this gym")
@@ -148,13 +157,34 @@ class GymsRepository(
             val newCount = oldCount + 1
             val newAvg = ((oldAvg * oldCount) + value) / newCount.toDouble()
 
-            tx.set(ratingRef, mapOf("value" to value, "createdAt" to FieldValue.serverTimestamp()))
-            tx.update(gymRef, mapOf("avgRating" to newAvg, "ratingCount" to newCount))
-            tx.update(userRef, "points", FieldValue.increment(1))
+            tx.set(
+                ratingRef,
+                mapOf(
+                    "value" to value,
+                    "authorUid" to uid,
+                    "authorUsername" to (me?.fullName?.ifBlank { me.email } ?: ""),
+                    "createdAt" to FieldValue.serverTimestamp()
+                )
+            )
+
+            tx.update(
+                gymRef,
+                mapOf(
+                    "avgRating" to newAvg,
+                    "ratingCount" to newCount
+                )
+            )
+
+            tx.set(
+                userRef,
+                mapOf("points" to FieldValue.increment(1)),
+                SetOptions.merge()
+            )
 
             null
         }.await()
     }
+
 
     suspend fun hasMyRating(gymId: String): Boolean {
         val uid = authRepo.currentUid() ?: return false

@@ -1,29 +1,40 @@
 package com.findmygym.app.ui.profile
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.findmygym.app.data.auth.AuthRepository
 import com.findmygym.app.data.gyms.GymsRepository
 import com.findmygym.app.data.model.AppUser
+import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileScreen(
     modifier: Modifier = Modifier,
-    onFocusGym: (Double, Double) -> Unit
+    onFocusGym: (Double, Double) -> Unit,
+    onAccountDeleted: () -> Unit
 ) {
     val repo = remember { AuthRepository() }
     val gymsRepo = remember { GymsRepository() }
+    val scope = rememberCoroutineScope()
 
     var me by remember { mutableStateOf<AppUser?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
+    val myGyms by gymsRepo.streamMyGyms().collectAsState(initial = emptyList())
     var showMyGyms by remember { mutableStateOf(false) }
 
-    val myGyms by gymsRepo.streamMyGyms().collectAsState(initial = emptyList())
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showReauth by remember { mutableStateOf(false) }
+    var reauthPassword by remember { mutableStateOf("") }
+    var deleting by remember { mutableStateOf(false) }
+    var deleteError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         loading = true
@@ -71,17 +82,22 @@ fun ProfileScreen(
 
         OutlinedButton(
             onClick = { showMyGyms = true },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !deleting
         ) { Text("My gyms") }
 
         Spacer(Modifier.height(10.dp))
 
         OutlinedButton(
-            onClick = {
+            onClick = { showDeleteConfirm = true },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !deleting
+        ) { Text(if (deleting) "Deleting..." else "Delete account") }
 
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) { Text("Delete account (next)") }
+        deleteError?.let {
+            Spacer(Modifier.height(12.dp))
+            Text(it, color = MaterialTheme.colorScheme.error)
+        }
     }
 
     if (showMyGyms) {
@@ -91,6 +107,86 @@ fun ProfileScreen(
             onSelect = { g ->
                 showMyGyms = false
                 onFocusGym(g.lat, g.lng)
+            }
+        )
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { if (!deleting) showDeleteConfirm = false },
+            title = { Text("Delete account") },
+            text = { Text("This will permanently delete your account and all gyms you added. This cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    enabled = !deleting,
+                    onClick = {
+                        showDeleteConfirm = false
+                        showReauth = true
+                    }
+                ) { Text("Continue") }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !deleting,
+                    onClick = { showDeleteConfirm = false }
+                ) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showReauth) {
+        AlertDialog(
+            onDismissRequest = { if (!deleting) showReauth = false },
+            title = { Text("Confirm password") },
+            text = {
+                Column {
+                    Text("For security, enter your password to delete the account.")
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = reauthPassword,
+                        onValueChange = { reauthPassword = it },
+                        label = { Text("Password") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !deleting && reauthPassword.isNotBlank(),
+                    onClick = {
+                        deleting = true
+                        deleteError = null
+
+                        scope.launch {
+                            try {
+                                repo.reauthenticateWithPassword(reauthPassword)
+                                reauthPassword = ""
+
+                                repo.deleteAccountAndData()
+                                repo.logout()
+
+                                showReauth = false
+                                onAccountDeleted()
+                            } catch (e: Exception) {
+                                deleteError = e.message ?: "Delete failed"
+                            } finally {
+                                deleting = false
+                            }
+                        }
+                    }
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !deleting,
+                    onClick = {
+                        reauthPassword = ""
+                        showReauth = false
+                    }
+                ) { Text("Cancel") }
             }
         )
     }

@@ -24,13 +24,10 @@ fun SplashScreen(
     val repo = remember { AuthRepository() }
 
     LaunchedEffect(Unit) {
-        // first() ceka prvu vrednost iz DataStore-a
         val rememberMe = rememberStore.rememberMeFlow.first()
 
-        // Ako korisnik ne zeli remember, mi forsiramo logout na startu (da restart trazi login)
         if (!rememberMe) repo.logout()
 
-        // Ako je remember upaljen i Firebase vec ima usera, preskoci login
         if (rememberMe && repo.isLoggedIn()) onGoMap() else onGoLogin()
     }
 

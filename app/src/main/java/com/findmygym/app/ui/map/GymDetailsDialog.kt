@@ -1,8 +1,8 @@
 package com.findmygym.app.ui.map
 
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -26,9 +26,13 @@ fun GymDetailsDialog(
 
     var hasRated by remember { mutableStateOf<Boolean?>(null) }
     var ratingSending by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
 
     var showAllComments by remember { mutableStateOf(false) }
+
+    var commentText by remember { mutableStateOf("") }
+    var commentSending by remember { mutableStateOf(false) }
+
+    var error by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(gym.id) {
         hasRated = null
@@ -43,7 +47,6 @@ fun GymDetailsDialog(
     val preview: List<GymComment> = remember(comments) {
         comments.takeLast(3).reversed()
     }
-
     val allSorted: List<GymComment> = remember(comments) {
         comments.reversed()
     }
@@ -62,19 +65,15 @@ fun GymDetailsDialog(
 
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    "⭐ ${"%.1f".format(gym.avgRating)}  (${gym.ratingCount})",
+                    "⭐ ${"%.1f".format(gym.avgRating)} (${gym.ratingCount})",
                     style = MaterialTheme.typography.titleSmall
                 )
 
                 Spacer(Modifier.height(14.dp))
 
                 when (hasRated) {
-                    null -> {
-                        Text("Checking rating...", style = MaterialTheme.typography.bodySmall)
-                    }
-                    true -> {
-                        Text("You already rated this gym.", style = MaterialTheme.typography.bodySmall)
-                    }
+                    null -> Text("Checking rating...", style = MaterialTheme.typography.bodySmall)
+                    true -> Text("You already rated this gym.", style = MaterialTheme.typography.bodySmall)
                     false -> {
                         Text("Rate this gym", style = MaterialTheme.typography.titleSmall)
                         Spacer(Modifier.height(6.dp))
@@ -125,7 +124,7 @@ fun GymDetailsDialog(
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(max = 320.dp)
+                                .heightIn(max = 260.dp)
                         ) {
                             items(allSorted) { c ->
                                 CommentRow(c)
@@ -142,6 +141,40 @@ fun GymDetailsDialog(
                     contentPadding = PaddingValues(0.dp)
                 ) {
                     Text(if (showAllComments) "Hide" else "Show all")
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    value = commentText,
+                    onValueChange = { commentText = it },
+                    label = { Text("Add a comment") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = false,
+                    minLines = 2
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(
+                        enabled = !commentSending && commentText.trim().isNotBlank(),
+                        onClick = {
+                            val text = commentText.trim()
+                            commentSending = true
+                            error = null
+                            scope.launch {
+                                try {
+                                    repo.addComment(gym.id, text)
+                                    commentText = ""
+                                } catch (e: Exception) {
+                                    error = e.message ?: "Failed to comment"
+                                } finally {
+                                    commentSending = false
+                                }
+                            }
+                        }
+                    ) { Text(if (commentSending) "Posting..." else "Post") }
                 }
 
                 error?.let {
@@ -162,10 +195,7 @@ private fun CommentRow(c: GymComment) {
     val date = remember(c.createdAt) { sdf.format(Date(c.createdAt)) }
 
     Column {
-        Text(
-            c.authorUsername.ifBlank { "User" },
-            style = MaterialTheme.typography.bodySmall
-        )
+        Text(c.authorUsername.ifBlank { "User" }, style = MaterialTheme.typography.bodySmall)
         Text(c.text)
         Text(date, style = MaterialTheme.typography.bodySmall)
     }
