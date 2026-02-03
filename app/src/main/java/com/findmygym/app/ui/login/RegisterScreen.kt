@@ -1,18 +1,22 @@
 package com.findmygym.app.ui.login
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.findmygym.app.ui.components.fmgTextFieldTextStyle
-
 
 @Composable
 fun RegisterScreen(
@@ -20,6 +24,7 @@ fun RegisterScreen(
     onGoMap: () -> Unit
 ) {
     val vm: AuthViewModel = viewModel()
+    val focusManager = LocalFocusManager.current
 
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -33,9 +38,20 @@ fun RegisterScreen(
 
     var localError by remember { mutableStateOf<String?>(null) }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    Surface(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { focusManager.clearFocus() })
+            },
+        color = MaterialTheme.colorScheme.background
+    ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState())
+                .imePadding(),
             verticalArrangement = Arrangement.Center
         ) {
             Text(
@@ -116,11 +132,14 @@ fun RegisterScreen(
 
             Button(
                 onClick = {
+                    focusManager.clearFocus()
                     localError = null
+
                     if (password != confirmPassword) {
                         localError = "Passwords do not match"
                         return@Button
                     }
+
                     vm.register(email, password, fullName, phone) { onGoMap() }
                 },
                 enabled = !vm.loading,
@@ -132,7 +151,10 @@ fun RegisterScreen(
             Spacer(Modifier.height(10.dp))
 
             OutlinedButton(
-                onClick = onBackToLogin,
+                onClick = {
+                    focusManager.clearFocus()
+                    onBackToLogin()
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Back")

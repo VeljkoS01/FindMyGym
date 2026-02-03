@@ -1,20 +1,24 @@
 package com.findmygym.app.ui.login
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.findmygym.app.data.auth.RememberMeStore
 import com.findmygym.app.ui.components.fmgTextFieldTextStyle
-
 
 @Composable
 fun LoginScreen(
@@ -23,6 +27,7 @@ fun LoginScreen(
 ) {
     val vm: AuthViewModel = viewModel()
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val rememberStore = remember { RememberMeStore(context) }
 
     var email by remember { mutableStateOf("") }
@@ -36,9 +41,20 @@ fun LoginScreen(
         }
     }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    Surface(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { focusManager.clearFocus() })
+            },
+        color = MaterialTheme.colorScheme.background
+    ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState())
+                .imePadding(),
             verticalArrangement = Arrangement.Center
         ) {
             Text(
@@ -78,7 +94,7 @@ fun LoginScreen(
             Spacer(Modifier.height(8.dp))
 
             Row(
-                Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Start
             ) {
                 Checkbox(
@@ -104,7 +120,10 @@ fun LoginScreen(
             Spacer(Modifier.height(16.dp))
 
             Button(
-                onClick = { vm.login(email, password, onGoMap) },
+                onClick = {
+                    focusManager.clearFocus()
+                    vm.login(email, password, onGoMap)
+                },
                 enabled = !vm.loading,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -114,7 +133,10 @@ fun LoginScreen(
             Spacer(Modifier.height(10.dp))
 
             OutlinedButton(
-                onClick = onGoRegister,
+                onClick = {
+                    focusManager.clearFocus()
+                    onGoRegister()
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Create account")
