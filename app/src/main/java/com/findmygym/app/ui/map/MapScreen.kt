@@ -15,28 +15,41 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.findmygym.app.data.auth.AuthRepository
 import com.findmygym.app.location.LocationTracker
 import com.findmygym.app.notifications.NotificationHelper
+import com.findmygym.app.ui.components.fmgTextFieldTextStyle
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import com.findmygym.app.ui.components.fmgTextFieldTextStyle
-
+import kotlinx.coroutines.launch
 
 @Composable
 fun MapScreen(
-    onGoLeaderboard: () -> Unit
+    modifier: Modifier = Modifier,
+    requestGymList: Boolean,
+    onRequestGymListConsumed: () -> Unit,
+    requestFilters: Boolean,
+    onRequestFiltersConsumed: () -> Unit,
+    requestAddGym: Boolean,
+    onRequestAddGymConsumed: () -> Unit
 ) {
     val context = LocalContext.current
     val tracker = remember(context) { LocationTracker(context) }
     val authRepo = remember { AuthRepository() }
     val vm: MapViewModel = viewModel()
+    val scope = rememberCoroutineScope()
 
     var hasLocationPermission by remember { mutableStateOf(false) }
     var myLatLng by remember { mutableStateOf<LatLng?>(null) }
     var localError by remember { mutableStateOf<String?>(null) }
 
+    // smooth map behavior
+    var hasCenteredOnMe by remember { mutableStateOf(false) }
+
+    // gym marker dialog (for now marker click only)
     var selectedGymId by remember { mutableStateOf<String?>(null) }
 
+    // add gym dialog state
     var showAdd by remember { mutableStateOf(false) }
     var gymName by remember { mutableStateOf("") }
     var gymType by remember { mutableStateOf("Gym") }
@@ -45,6 +58,12 @@ fun MapScreen(
     // picking mode + pending pin
     var pickingLocation by remember { mutableStateOf(false) }
     var pendingLatLng by remember { mutableStateOf<LatLng?>(null) }
+
+    // gym list popup
+    var showGymList by remember { mutableStateOf(false) }
+
+    // filters popup
+    var showFilters by remember { mutableStateOf(false) }
 
     // notifications permission (Android 13+)
     var notifPermissionOk by remember { mutableStateOf(Build.VERSION.SDK_INT < 33) }
@@ -77,31 +96,68 @@ fun MapScreen(
         }
     }
 
+    // open gym list when requested from drawer
+    LaunchedEffect(requestGymList) {
+        if (requestGymList) {
+            showGymList = true
+            onRequestGymListConsumed()
+        }
+    }
+
+    // open filters when requested from top-right icon
+    LaunchedEffect(requestFilters) {
+        if (requestFilters) {
+            showFilters = true
+            onRequestFiltersConsumed()
+        }
+    }
+
+    // start add gym picking mode from drawer
+    LaunchedEffect(requestAddGym) {
+        if (requestAddGym) {
+            // reset + enter picking mode
+            localError = null
+            pendingLatLng = null
+            pickingLocation = true
+            showAdd = false
+            onRequestAddGymConsumed()
+        }
+    }
+
     val fallback = LatLng(43.3209, 21.8958)
     val cameraPositionState = rememberCameraPositionState {
         position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(fallback, 13f)
     }
 
+    // location updates: UI throttled + center only once + send to backend every 10s
     LaunchedEffect(hasLocationPermission) {
         if (!hasLocationPermission) return@LaunchedEffect
         localError = null
 
         var lastSentMs = 0L
+        var lastUiUpdateMs = 0L
+
         try {
             tracker.locationUpdates().collectLatest { loc ->
                 val ll = LatLng(loc.latitude, loc.longitude)
-                myLatLng = ll
-
-                cameraPositionState.position =
-                    com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(ll, 16f)
 
                 val now = System.currentTimeMillis()
+                if (now - lastUiUpdateMs >= 1000) { // UI update max 1/sec
+                    myLatLng = ll
+                    lastUiUpdateMs = now
+                }
+
+                if (!hasCenteredOnMe) {
+                    cameraPositionState.position =
+                        com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(ll, 16f)
+                    hasCenteredOnMe = true
+                }
+
                 if (now - lastSentMs >= 10_000) {
                     lastSentMs = now
                     try {
                         authRepo.updateMyLocation(loc.latitude, loc.longitude)
-                    } catch (_: Exception) {
-                    }
+                    } catch (_: Exception) { }
                 }
             }
         } catch (e: Exception) {
@@ -109,6 +165,7 @@ fun MapScreen(
         }
     }
 
+    // nearby gym notification loop
     var lastNotifiedGymId by remember { mutableStateOf<String?>(null) }
     var lastNotifiedAt by remember { mutableStateOf(0L) }
 
@@ -143,14 +200,14 @@ fun MapScreen(
         }
     }
 
-    val my = myLatLng
-    val filtered = vm.filteredGyms(my?.latitude, my?.longitude)
+    val filtered by remember {
+        derivedStateOf {
+            val my = myLatLng
+            vm.filteredGyms(my?.latitude, my?.longitude)
+        }
+    }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.systemBars)
-    ) {
+    Column(modifier = modifier.fillMaxSize()) {
         (localError ?: vm.error)?.let {
             Text(
                 it,
@@ -159,31 +216,11 @@ fun MapScreen(
             )
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-        ) {
-            OutlinedTextField(
-                value = vm.query,
-                onValueChange = { vm.query = it },
-                label = { Text("Search gyms") },
-                textStyle = fmgTextFieldTextStyle(),
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(8.dp))
-            RadiusDropdown(
-                radiusKm = vm.radiusKm,
-                onChange = { vm.radiusKm = it }
-            )
-        }
-
-        Box(modifier = Modifier.weight(1f)) {
+        Box(modifier = Modifier.fillMaxSize()) {
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
                 properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
-
                 onMapClick = { ll ->
                     if (pickingLocation) {
                         pendingLatLng = ll
@@ -191,7 +228,6 @@ fun MapScreen(
                         pickingLocation = false
                     }
                 },
-
                 onMapLongClick = { ll ->
                     if (pickingLocation) {
                         pendingLatLng = ll
@@ -200,7 +236,6 @@ fun MapScreen(
                     }
                 }
             ) {
-
                 pendingLatLng?.let { ll ->
                     Marker(
                         state = MarkerState(position = ll),
@@ -221,7 +256,6 @@ fun MapScreen(
                 }
             }
 
-            // small hint when choosing location
             if (pickingLocation) {
                 Surface(
                     tonalElevation = 2.dp,
@@ -229,61 +263,60 @@ fun MapScreen(
                         .align(Alignment.TopCenter)
                         .padding(12.dp)
                 ) {
-                    Text(
-                        "Tap on map to place the gym pin",
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
-                    )
-                }
-            }
-
-            FloatingActionButton(
-                onClick = onGoLeaderboard,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(16.dp)
-            ) {
-                Text("🏆")
-            }
-
-            FloatingActionButton(
-                onClick = {
-                    // ✅ + starts "pick location" mode, NOT my location
-                    localError = null
-                    pendingLatLng = null
-                    pickingLocation = true
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp)
-            ) {
-                Text("+")
-            }
-        }
-
-        if (filtered.isNotEmpty()) {
-            Divider()
-            Text(
-                "Results (${filtered.size})",
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.titleSmall
-            )
-
-            filtered.take(10).forEach { g ->
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(g.name)
-                        Text(g.type, style = MaterialTheme.typography.bodySmall)
+                    ) {
+                        Text("Tap on map to place the gym pin")
+                        Spacer(Modifier.width(12.dp))
+                        TextButton(onClick = {
+                            pickingLocation = false
+                            pendingLatLng = null
+                        }) { Text("Cancel") }
                     }
-                    Text("⭐ ${"%.1f".format(g.avgRating)}", style = MaterialTheme.typography.bodySmall)
                 }
-                Divider()
             }
         }
+    }
+
+    // Gym list popup: select -> ONLY move camera (no dialog)
+    if (showGymList) {
+        GymListDialog(
+            gyms = vm.gyms,
+            myLatLng = myLatLng,
+            distanceKm = { g ->
+                val ll = myLatLng
+                if (ll == null) Double.MAX_VALUE
+                else vm.distanceKm(ll.latitude, ll.longitude, g.lat, g.lng)
+            },
+            onDismiss = { showGymList = false },
+            onSelect = { g ->
+                showGymList = false
+                scope.launch {
+                    val target = LatLng(g.lat, g.lng)
+                    val update = CameraUpdateFactory.newLatLngZoom(target, 16f)
+                    cameraPositionState.animate(update, 700)
+                }
+            }
+        )
+    }
+
+    // Filters dialog (name + radius) + Clear
+    if (showFilters) {
+        MapFiltersDialog(
+            initialQuery = vm.query,
+            initialRadiusKm = vm.radiusKm,
+            onApply = { q, r ->
+                vm.query = q
+                vm.radiusKm = r
+                showFilters = false
+            },
+            onClear = {
+                vm.query = ""
+                vm.radiusKm = 0
+            },
+            onCancel = { showFilters = false }
+        )
     }
 
     if (showAdd) {
@@ -372,4 +405,47 @@ fun MapScreen(
             onClose = { selectedGymId = null }
         )
     }
+}
+
+@Composable
+private fun MapFiltersDialog(
+    initialQuery: String,
+    initialRadiusKm: Int,
+    onApply: (String, Int) -> Unit,
+    onClear: () -> Unit,
+    onCancel: () -> Unit
+) {
+    var q by remember { mutableStateOf(initialQuery) }
+    var r by remember { mutableStateOf(initialRadiusKm) }
+
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text("Search filters") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = q,
+                    onValueChange = { q = it },
+                    label = { Text("Name / Type / Description") },
+                    textStyle = fmgTextFieldTextStyle(),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(10.dp))
+                RadiusDropdown(
+                    radiusKm = r,
+                    onChange = { r = it }
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onApply(q, r) }) { Text("Apply") }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = onClear) { Text("Clear") }
+                Spacer(Modifier.width(8.dp))
+                TextButton(onClick = onCancel) { Text("Cancel") }
+            }
+        }
+    )
 }

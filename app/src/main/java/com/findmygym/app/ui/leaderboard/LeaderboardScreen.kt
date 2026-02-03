@@ -6,51 +6,37 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LeaderboardScreen(onBack: () -> Unit) {
+fun LeaderboardScreen(
+    modifier: Modifier = Modifier
+) {
     val vm: LeaderboardViewModel = viewModel()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Leaderboard") },
-                navigationIcon = {
-                    TextButton(onClick = onBack) { Text("Back") }
-                }
-            )
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+    ) {
+        vm.error?.let {
+            Spacer(Modifier.height(8.dp))
+            Text(it, color = MaterialTheme.colorScheme.error)
         }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp)
-        ) {
-            vm.error?.let {
-                Spacer(Modifier.height(8.dp))
-                Text(it, color = MaterialTheme.colorScheme.error)
-            }
 
-            Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(12.dp))
 
-            LazyColumn {
-                itemsIndexed(vm.users) { idx, u ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
-                        Text("#${idx + 1}", modifier = Modifier.width(48.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(u.fullName.ifBlank { u.email })
-                            if (u.fullName.isNotBlank()) {
-                                Text(u.fullName, style = MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                        Text("${u.points} pts")
+        LazyColumn {
+            itemsIndexed(vm.users) { idx, u ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
+                    Text("#${idx + 1}", modifier = Modifier.width(48.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(u.fullName.ifBlank { u.email })
                     }
-                    Divider()
+                    Text("${u.points} pts")
                 }
+                Divider()
             }
         }
     }
