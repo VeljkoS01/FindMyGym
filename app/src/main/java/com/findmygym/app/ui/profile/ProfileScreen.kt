@@ -6,19 +6,24 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.findmygym.app.data.auth.AuthRepository
+import com.findmygym.app.data.gyms.GymsRepository
 import com.findmygym.app.data.model.AppUser
-import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onFocusGym: (Double, Double) -> Unit
 ) {
     val repo = remember { AuthRepository() }
-    val scope = rememberCoroutineScope()
+    val gymsRepo = remember { GymsRepository() }
 
     var me by remember { mutableStateOf<AppUser?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+
+    var showMyGyms by remember { mutableStateOf(false) }
+
+    val myGyms by gymsRepo.streamMyGyms().collectAsState(initial = emptyList())
 
     LaunchedEffect(Unit) {
         loading = true
@@ -65,21 +70,28 @@ fun ProfileScreen(
         Spacer(Modifier.height(12.dp))
 
         OutlinedButton(
-            onClick = {
-                scope.launch {
-                }
-            },
+            onClick = { showMyGyms = true },
             modifier = Modifier.fillMaxWidth()
-        ) { Text("My gyms (next)") }
+        ) { Text("My gyms") }
 
         Spacer(Modifier.height(10.dp))
 
         OutlinedButton(
             onClick = {
-                scope.launch {
-                }
+
             },
             modifier = Modifier.fillMaxWidth()
         ) { Text("Delete account (next)") }
+    }
+
+    if (showMyGyms) {
+        MyGymsDialog(
+            gyms = myGyms,
+            onDismiss = { showMyGyms = false },
+            onSelect = { g ->
+                showMyGyms = false
+                onFocusGym(g.lat, g.lng)
+            }
+        )
     }
 }

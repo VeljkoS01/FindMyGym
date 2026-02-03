@@ -24,9 +24,19 @@ fun AppNav() {
     var requestFilters by rememberSaveable { mutableStateOf(false) }
     var requestAddGym by rememberSaveable { mutableStateOf(false) }
 
+    var focusLat by rememberSaveable { mutableStateOf<Double?>(null) }
+    var focusLng by rememberSaveable { mutableStateOf<Double?>(null) }
+
     fun goToMap() {
         nav.navigate(Routes.MAP) { launchSingleTop = true }
     }
+
+    fun focusGymOnMap(lat: Double, lng: Double) {
+        focusLat = lat
+        focusLng = lng
+        nav.navigate(Routes.MAP) { launchSingleTop = true }
+    }
+
 
     NavHost(
         navController = nav,
@@ -78,15 +88,20 @@ fun AppNav() {
                 onGoMap = { nav.navigate(Routes.MAP) { launchSingleTop = true } },
                 onGoProfile = { nav.navigate(Routes.PROFILE) { launchSingleTop = true } },
                 onGoLeaderboard = { nav.navigate(Routes.LEADERBOARD) { launchSingleTop = true } },
+
+                // actions on map
                 onGoGymList = { requestGymList = true },
                 onGoAddGym = { requestAddGym = true },
+
+                // top-right icon only on map
+                onOpenFilters = { requestFilters = true },
+
                 onLogout = {
                     authRepo.logout()
                     nav.navigate(Routes.SPLASH) {
                         popUpTo(nav.graph.id) { inclusive = true }
                     }
-                },
-                onOpenFilters = { requestFilters = true }
+                }
             ) { inner ->
                 MapScreen(
                     modifier = Modifier.padding(inner),
@@ -95,7 +110,13 @@ fun AppNav() {
                     requestFilters = requestFilters,
                     onRequestFiltersConsumed = { requestFilters = false },
                     requestAddGym = requestAddGym,
-                    onRequestAddGymConsumed = { requestAddGym = false }
+                    onRequestAddGymConsumed = { requestAddGym = false },
+                    focusLat = focusLat,
+                    focusLng = focusLng,
+                    onFocusConsumed = {
+                        focusLat = null
+                        focusLng = null
+                    }
                 )
             }
         }
@@ -106,9 +127,7 @@ fun AppNav() {
             AppDrawerScaffold(
                 title = "Leaderboard",
                 currentRoute = Routes.LEADERBOARD,
-                onGoMap = { nav.navigate(Routes.MAP) { launchSingleTop = true } },
-
-
+                onGoMap = { goToMap() },
                 onGoProfile = { nav.navigate(Routes.PROFILE) { launchSingleTop = true } },
                 onGoLeaderboard = { nav.navigate(Routes.LEADERBOARD) { launchSingleTop = true } },
 
@@ -140,9 +159,7 @@ fun AppNav() {
             AppDrawerScaffold(
                 title = "Profile",
                 currentRoute = Routes.PROFILE,
-                onGoMap = { nav.navigate(Routes.MAP) { launchSingleTop = true } },
-
-
+                onGoMap = { goToMap() },
                 onGoProfile = { nav.navigate(Routes.PROFILE) { launchSingleTop = true } },
                 onGoLeaderboard = { nav.navigate(Routes.LEADERBOARD) { launchSingleTop = true } },
 
@@ -164,7 +181,11 @@ fun AppNav() {
                     }
                 }
             ) { inner ->
-                ProfileScreen(modifier = Modifier.padding(inner))
+                ProfileScreen(
+                    modifier = Modifier.padding(inner),
+                    onFocusGym = { lat, lng -> focusGymOnMap(lat, lng) }
+                )
+
             }
         }
     }

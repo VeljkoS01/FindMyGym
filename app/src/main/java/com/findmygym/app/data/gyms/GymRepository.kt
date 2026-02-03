@@ -2,14 +2,14 @@ package com.findmygym.app.data.gyms
 
 import com.findmygym.app.data.auth.AuthRepository
 import com.findmygym.app.data.model.Gym
+import com.findmygym.app.data.model.GymComment
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
-import com.findmygym.app.data.model.GymComment
-
 
 class GymsRepository(
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
@@ -31,6 +31,15 @@ class GymsRepository(
             }
 
         awaitClose { reg.remove() }
+    }
+
+    fun streamMyGyms(): Flow<List<Gym>> {
+        val uid = authRepo.currentUid()
+        return streamGyms().map { list ->
+            if (uid.isNullOrBlank()) emptyList()
+            else list.filter { it.authorUid == uid }
+                .sortedByDescending { it.createdAt }
+        }
     }
 
     suspend fun addGym(
@@ -59,7 +68,6 @@ class GymsRepository(
                 avgRating = 0.0,
                 ratingCount = 0
             )
-
 
             tx.set(gymRef, gym)
 
@@ -108,7 +116,6 @@ class GymsRepository(
                 createdAt = System.currentTimeMillis()
             )
 
-
             tx.set(commentRef, c)
 
             val userRef = db.collection("users").document(uid)
@@ -156,5 +163,4 @@ class GymsRepository(
             .get().await()
         return snap.exists()
     }
-
 }

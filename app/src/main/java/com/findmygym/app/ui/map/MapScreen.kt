@@ -31,7 +31,10 @@ fun MapScreen(
     requestFilters: Boolean,
     onRequestFiltersConsumed: () -> Unit,
     requestAddGym: Boolean,
-    onRequestAddGymConsumed: () -> Unit
+    onRequestAddGymConsumed: () -> Unit,
+    focusLat: Double?,
+    focusLng: Double?,
+    onFocusConsumed: () -> Unit
 ) {
     val context = LocalContext.current
     val tracker = remember(context) { LocationTracker(context) }
@@ -183,6 +186,15 @@ fun MapScreen(
                 }
             }
             delay(15_000)
+        }
+    }
+
+    LaunchedEffect(focusLat, focusLng) {
+        if (focusLat != null && focusLng != null) {
+            val target = LatLng(focusLat, focusLng)
+            val update = CameraUpdateFactory.newLatLngZoom(target, 16f)
+            cameraPositionState.animate(update, 700)
+            onFocusConsumed()
         }
     }
 
