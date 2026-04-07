@@ -25,7 +25,7 @@ fun LoginScreen(
     onGoRegister: () -> Unit,
     onGoMap: () -> Unit
 ) {
-    val vm: AuthViewModel = viewModel()
+    val viewModel: AuthViewModel = viewModel()
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val rememberStore = remember { RememberMeStore(context) }
@@ -101,7 +101,7 @@ fun LoginScreen(
                     checked = rememberMe,
                     onCheckedChange = {
                         rememberMe = it
-                        vm.setRememberMe(rememberStore, it)
+                        viewModel.setRememberMe(rememberStore, it)
                     }
                 )
                 Spacer(Modifier.width(8.dp))
@@ -112,7 +112,7 @@ fun LoginScreen(
                 )
             }
 
-            vm.error?.let {
+            viewModel.error?.let {
                 Spacer(Modifier.height(10.dp))
                 Text(it, color = MaterialTheme.colorScheme.error)
             }
@@ -122,12 +122,12 @@ fun LoginScreen(
             Button(
                 onClick = {
                     focusManager.clearFocus()
-                    vm.login(email, password, onGoMap)
+                    viewModel.login(email, password, onGoMap)
                 },
-                enabled = !vm.loading,
+                enabled = !viewModel.loading,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (vm.loading) "Signing in..." else "Sign in")
+                Text(if (viewModel.loading) "Signing in..." else "Sign in")
             }
 
             Spacer(Modifier.height(10.dp))

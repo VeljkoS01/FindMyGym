@@ -7,20 +7,19 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.findmygym.app.data.auth.AuthRepository
 import com.findmygym.app.location.LocationTracker
 import com.findmygym.app.notifications.NotificationHelper
 import com.findmygym.app.ui.components.fmgTextFieldTextStyle
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @Composable
@@ -38,8 +37,7 @@ fun MapScreen(
 ) {
     val context = LocalContext.current
     val tracker = remember(context) { LocationTracker(context) }
-    val authRepo = remember { AuthRepository() }
-    val vm: MapViewModel = viewModel()
+    val viewModel: MapViewModel = viewModel()
     val scope = rememberCoroutineScope()
 
     var hasLocationPermission by remember { mutableStateOf(false) }
@@ -47,7 +45,6 @@ fun MapScreen(
     var localError by remember { mutableStateOf<String?>(null) }
 
     var hasCenteredOnMe by remember { mutableStateOf(false) }
-
     var selectedGymId by remember { mutableStateOf<String?>(null) }
 
     var showAdd by remember { mutableStateOf(false) }
@@ -128,10 +125,10 @@ fun MapScreen(
         var lastUiUpdateMs = 0L
 
         try {
-            tracker.locationUpdates().collectLatest { loc ->
+            tracker.locationUpdates().collect { loc ->
                 val ll = LatLng(loc.latitude, loc.longitude)
-
                 val now = System.currentTimeMillis()
+
                 if (now - lastUiUpdateMs >= 1000) {
                     myLatLng = ll
                     lastUiUpdateMs = now
@@ -145,9 +142,7 @@ fun MapScreen(
 
                 if (now - lastSentMs >= 10_000) {
                     lastSentMs = now
-                    try {
-                        authRepo.updateMyLocation(loc.latitude, loc.longitude)
-                    } catch (_: Exception) { }
+                    viewModel.updateMyLocation(loc.latitude, loc.longitude)
                 }
             }
         } catch (e: Exception) {
@@ -155,37 +150,21 @@ fun MapScreen(
         }
     }
 
-    var lastNotifiedGymId by remember { mutableStateOf<String?>(null) }
-    var lastNotifiedAt by remember { mutableStateOf(0L) }
-
-    LaunchedEffect(notifPermissionOk, vm.gyms) {
+    LaunchedEffect(notifPermissionOk, myLatLng, viewModel.gyms) {
         if (!notifPermissionOk) return@LaunchedEffect
+
+        val ll = myLatLng ?: return@LaunchedEffect
         NotificationHelper.ensureChannel(context)
 
-        while (true) {
-            val ll = myLatLng
-            if (ll != null) {
-                val near = vm.gyms
-                    .map { g -> g to vm.distanceKm(ll.latitude, ll.longitude, g.lat, g.lng) }
-                    .filter { it.second <= 0.2 }
-                    .minByOrNull { it.second }
-                    ?.first
-
-                val now = System.currentTimeMillis()
-                val cooldownOk = now - lastNotifiedAt > 3 * 60 * 1000
-
-                if (near != null && (near.id != lastNotifiedGymId || cooldownOk)) {
-                    lastNotifiedGymId = near.id
-                    lastNotifiedAt = now
-
-                    NotificationHelper.showNearbyGym(
-                        context = context,
-                        title = "Gym nearby",
-                        message = "${near.name} is close to you"
-                    )
-                }
-            }
-            delay(15_000)
+        viewModel.checkNearbyGymsAndNotify(
+            myLat = ll.latitude,
+            myLng = ll.longitude
+        ) { title, message ->
+            NotificationHelper.showNearbyGym(
+                context = context,
+                title = title,
+                message = message
+            )
         }
     }
 
@@ -198,17 +177,17 @@ fun MapScreen(
         }
     }
 
-    val filtered by remember {
+    val filtered by remember(myLatLng, viewModel.gyms, viewModel.query, viewModel.radiusKm) {
         derivedStateOf {
             val my = myLatLng
-            vm.filteredGyms(my?.latitude, my?.longitude)
+            viewModel.filteredGyms(my?.latitude, my?.longitude)
         }
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        (localError ?: vm.error)?.let {
+        (localError ?: viewModel.error)?.let {
             Text(
-                it,
+                text = it,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
             )
@@ -241,13 +220,13 @@ fun MapScreen(
                     )
                 }
 
-                filtered.forEach { g ->
+                filtered.forEach { gym ->
                     Marker(
-                        state = MarkerState(position = LatLng(g.lat, g.lng)),
-                        title = g.name,
-                        snippet = "${g.type} • ⭐ ${"%.1f".format(g.avgRating)} (${g.ratingCount})",
+                        state = MarkerState(position = LatLng(gym.lat, gym.lng)),
+                        title = gym.name,
+                        snippet = "${gym.type} • ⭐ ${"%.1f".format(gym.avgRating)} (${gym.ratingCount})",
                         onClick = {
-                            selectedGymId = g.id
+                            selectedGymId = gym.id
                             true
                         }
                     )
@@ -267,10 +246,14 @@ fun MapScreen(
                     ) {
                         Text("Tap on map to place the gym pin")
                         Spacer(Modifier.width(12.dp))
-                        TextButton(onClick = {
-                            pickingLocation = false
-                            pendingLatLng = null
-                        }) { Text("Cancel") }
+                        TextButton(
+                            onClick = {
+                                pickingLocation = false
+                                pendingLatLng = null
+                            }
+                        ) {
+                            Text("Cancel")
+                        }
                     }
                 }
             }
@@ -279,18 +262,18 @@ fun MapScreen(
 
     if (showGymList) {
         GymListDialog(
-            gyms = vm.gyms,
+            gyms = viewModel.gyms,
             myLatLng = myLatLng,
-            distanceKm = { g ->
+            distanceKm = { gym ->
                 val ll = myLatLng
                 if (ll == null) Double.MAX_VALUE
-                else vm.distanceKm(ll.latitude, ll.longitude, g.lat, g.lng)
+                else viewModel.distanceKm(ll.latitude, ll.longitude, gym.lat, gym.lng)
             },
             onDismiss = { showGymList = false },
-            onSelect = { g ->
+            onSelect = { gym ->
                 showGymList = false
                 scope.launch {
-                    val target = LatLng(g.lat, g.lng)
+                    val target = LatLng(gym.lat, gym.lng)
                     val update = CameraUpdateFactory.newLatLngZoom(target, 16f)
                     cameraPositionState.animate(update, 700)
                 }
@@ -300,16 +283,16 @@ fun MapScreen(
 
     if (showFilters) {
         MapFiltersDialog(
-            initialQuery = vm.query,
-            initialRadiusKm = vm.radiusKm,
-            onApply = { q, r ->
-                vm.query = q
-                vm.radiusKm = r
+            initialQuery = viewModel.query,
+            initialRadiusKm = viewModel.radiusKm,
+            onApply = { query, radius ->
+                viewModel.query = query
+                viewModel.radiusKm = radius
                 showFilters = false
             },
             onClear = {
-                vm.query = ""
-                vm.radiusKm = 0
+                viewModel.query = ""
+                viewModel.radiusKm = 0
             },
             onCancel = { showFilters = false }
         )
@@ -333,7 +316,7 @@ fun MapScreen(
                             return@TextButton
                         }
 
-                        vm.addGym(
+                        viewModel.addGym(
                             name = gymName,
                             type = gymType,
                             desc = gymDesc,
@@ -347,21 +330,27 @@ fun MapScreen(
                             pendingLatLng = null
                         }
                     }
-                ) { Text("Add") }
+                ) {
+                    Text("Add")
+                }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    showAdd = false
-                    pendingLatLng = null
-                    pickingLocation = false
-                }) { Text("Cancel") }
+                TextButton(
+                    onClick = {
+                        showAdd = false
+                        pendingLatLng = null
+                        pickingLocation = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
             },
             title = { Text("Add gym") },
             text = {
                 Column {
                     pendingLatLng?.let { ll ->
                         Text(
-                            "Pinned location: ${"%.5f".format(ll.latitude)}, ${"%.5f".format(ll.longitude)}",
+                            text = "Pinned location: ${"%.5f".format(ll.latitude)}, ${"%.5f".format(ll.longitude)}",
                             style = MaterialTheme.typography.bodySmall
                         )
                         Spacer(Modifier.height(8.dp))
@@ -374,7 +363,9 @@ fun MapScreen(
                         textStyle = fmgTextFieldTextStyle(),
                         modifier = Modifier.fillMaxWidth()
                     )
+
                     Spacer(Modifier.height(8.dp))
+
                     OutlinedTextField(
                         value = gymType,
                         onValueChange = { gymType = it },
@@ -382,7 +373,9 @@ fun MapScreen(
                         textStyle = fmgTextFieldTextStyle(),
                         modifier = Modifier.fillMaxWidth()
                     )
+
                     Spacer(Modifier.height(8.dp))
+
                     OutlinedTextField(
                         value = gymDesc,
                         onValueChange = { gymDesc = it },
@@ -395,10 +388,10 @@ fun MapScreen(
         )
     }
 
-    val selectedGym = vm.gyms.firstOrNull { it.id == selectedGymId }
-    selectedGym?.let { g ->
+    val selectedGym = viewModel.gyms.firstOrNull { it.id == selectedGymId }
+    selectedGym?.let { gym ->
         GymDetailsDialog(
-            gym = g,
+            gym = gym,
             onClose = { selectedGymId = null }
         )
     }
@@ -412,8 +405,10 @@ private fun MapFiltersDialog(
     onClear: () -> Unit,
     onCancel: () -> Unit
 ) {
-    var q by remember { mutableStateOf(initialQuery) }
-    var r by remember { mutableStateOf(initialRadiusKm) }
+    var q by rememberSaveable(initialQuery) { mutableStateOf(initialQuery) }
+    var r by rememberSaveable(initialRadiusKm) { mutableStateOf(initialRadiusKm) }
+
+    val focusManager = LocalFocusManager.current
 
     AlertDialog(
         onDismissRequest = onCancel,
@@ -435,13 +430,38 @@ private fun MapFiltersDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onApply(q, r) }) { Text("Apply") }
+            TextButton(
+                onClick = {
+                    focusManager.clearFocus()
+                    onApply(q, r)
+                }
+            ) {
+                Text("Apply")
+            }
         },
         dismissButton = {
             Row {
-                TextButton(onClick = onClear) { Text("Clear") }
+                TextButton(
+                    onClick = {
+                        focusManager.clearFocus()
+                        q = ""
+                        r = 0
+                        onClear()
+                    }
+                ) {
+                    Text("Clear")
+                }
+
                 Spacer(Modifier.width(8.dp))
-                TextButton(onClick = onCancel) { Text("Cancel") }
+
+                TextButton(
+                    onClick = {
+                        focusManager.clearFocus()
+                        onCancel()
+                    }
+                ) {
+                    Text("Cancel")
+                }
             }
         }
     )

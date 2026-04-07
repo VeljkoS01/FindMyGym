@@ -40,7 +40,7 @@ class AuthRepository(
         if (phone.trim().isBlank()) throw Exception("Please enter your phone number")
 
         val result = auth.createUserWithEmailAndPassword(email, password).await()
-        val user = result.user ?: throw Exception("Error: no user")
+        val user = result.user ?: throw Exception("Registration failed. Please try again.")
 
         val profile = AppUser(
             uid = user.uid,
@@ -116,7 +116,7 @@ class AuthRepository(
         }
     }
 
-    /* Brise korisnika kao i sve teretane koje je on napravio, ocene i komentare na toj/tim teretani
+    /* Brise korisnika kao i sve teretane koje je on napravio, ocene i komentare tim teretanama
     i sve ocene i komentare koje je korisnik ostavio na drugim teretanama */
     suspend fun deleteAccountAndData() {
         val user = auth.currentUser ?: throw Exception("Not logged in")
@@ -142,7 +142,7 @@ class AuthRepository(
                 // moje gyms brisemo kasnije cele
                 if (myGymIds.contains(gymId)) continue
 
-                // ratingId == uid (po tvojim pravilima)
+                // da li postoji moja ocena na ovoj teretani
                 val ratingRef = gymRef.collection("ratings").document(uid)
                 val ratingSnap = ratingRef.get(Source.SERVER).await()
                 if (!ratingSnap.exists()) continue

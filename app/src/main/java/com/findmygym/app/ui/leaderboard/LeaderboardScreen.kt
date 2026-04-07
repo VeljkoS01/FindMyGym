@@ -13,14 +13,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 fun LeaderboardScreen(
     modifier: Modifier = Modifier
 ) {
-    val vm: LeaderboardViewModel = viewModel()
+    val viewModel: LeaderboardViewModel = viewModel()
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
-        vm.error?.let {
+        viewModel.error?.let {
             Spacer(Modifier.height(8.dp))
             Text(it, color = MaterialTheme.colorScheme.error)
         }
@@ -28,7 +28,7 @@ fun LeaderboardScreen(
         Spacer(Modifier.height(12.dp))
 
         LazyColumn {
-            itemsIndexed(vm.users) { idx, u ->
+            itemsIndexed(viewModel.users) { idx, u ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
                     Text("#${idx + 1}", modifier = Modifier.width(48.dp))
                     Column(Modifier.weight(1f)) {

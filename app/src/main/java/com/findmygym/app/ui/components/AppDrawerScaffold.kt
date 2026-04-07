@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import com.findmygym.app.nav.Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,21 +72,21 @@ fun AppDrawerScaffold(
 
                 NavigationDrawerItem(
                     label = { Text("Map") },
-                    selected = currentRoute == "map" || currentRoute == "MAP" || currentRoute == "Routes.MAP",
+                    selected = currentRoute == Routes.MAP,
                     onClick = { closeDrawerThen(onGoMap) },
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
 
                 NavigationDrawerItem(
                     label = { Text("Profile") },
-                    selected = currentRoute == "profile",
+                    selected = currentRoute == Routes.PROFILE,
                     onClick = { closeDrawerThen(onGoProfile) },
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
 
                 NavigationDrawerItem(
                     label = { Text("Leaderboard") },
-                    selected = currentRoute == "leaderboard",
+                    selected = currentRoute == Routes.LEADERBOARD,
                     onClick = { closeDrawerThen(onGoLeaderboard) },
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )

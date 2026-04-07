@@ -18,7 +18,7 @@ import com.findmygym.app.ui.splash.SplashScreen
 
 @Composable
 fun AppNav() {
-    val nav = rememberNavController()
+    val navController = rememberNavController()
 
     var requestGymList by rememberSaveable { mutableStateOf(false) }
     var requestFilters by rememberSaveable { mutableStateOf(false) }
@@ -28,7 +28,7 @@ fun AppNav() {
     var focusLng by rememberSaveable { mutableStateOf<Double?>(null) }
 
     fun goToMap() {
-        nav.navigate(Routes.MAP) { launchSingleTop = true }
+        navController.navigate(Routes.MAP) { launchSingleTop = true }
     }
 
     fun focusGymOnMap(lat: Double, lng: Double) {
@@ -38,25 +38,25 @@ fun AppNav() {
     }
 
     fun goToSplashClearBackstack() {
-        nav.navigate(Routes.SPLASH) {
-            popUpTo(nav.graph.id) { inclusive = true }
+        navController.navigate(Routes.SPLASH) {
+            popUpTo(navController.graph.id) { inclusive = true }
             launchSingleTop = true
         }
     }
 
     NavHost(
-        navController = nav,
+        navController = navController,
         startDestination = Routes.SPLASH
     ) {
         composable(Routes.SPLASH) {
             SplashScreen(
                 onGoLogin = {
-                    nav.navigate(Routes.LOGIN) {
+                    navController.navigate(Routes.LOGIN) {
                         popUpTo(Routes.SPLASH) { inclusive = true }
                     }
                 },
                 onGoMap = {
-                    nav.navigate(Routes.MAP) {
+                    navController.navigate(Routes.MAP) {
                         popUpTo(Routes.SPLASH) { inclusive = true }
                     }
                 }
@@ -65,9 +65,9 @@ fun AppNav() {
 
         composable(Routes.LOGIN) {
             LoginScreen(
-                onGoRegister = { nav.navigate(Routes.REGISTER) },
+                onGoRegister = { navController.navigate(Routes.REGISTER) },
                 onGoMap = {
-                    nav.navigate(Routes.MAP) {
+                    navController.navigate(Routes.MAP) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 }
@@ -76,9 +76,9 @@ fun AppNav() {
 
         composable(Routes.REGISTER) {
             RegisterScreen(
-                onBackToLogin = { nav.popBackStack() },
+                onBackToLogin = { navController.popBackStack() },
                 onGoMap = {
-                    nav.navigate(Routes.MAP) {
+                    navController.navigate(Routes.MAP) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 }
@@ -92,9 +92,9 @@ fun AppNav() {
                 title = "Map",
                 currentRoute = Routes.MAP,
 
-                onGoMap = { nav.navigate(Routes.MAP) { launchSingleTop = true } },
-                onGoProfile = { nav.navigate(Routes.PROFILE) { launchSingleTop = true } },
-                onGoLeaderboard = { nav.navigate(Routes.LEADERBOARD) { launchSingleTop = true } },
+                onGoMap = { navController.navigate(Routes.MAP) { launchSingleTop = true } },
+                onGoProfile = { navController.navigate(Routes.PROFILE) { launchSingleTop = true } },
+                onGoLeaderboard = { navController.navigate(Routes.LEADERBOARD) { launchSingleTop = true } },
 
                 onGoGymList = { requestGymList = true },
                 onGoAddGym = { requestAddGym = true },
@@ -133,8 +133,8 @@ fun AppNav() {
                 currentRoute = Routes.LEADERBOARD,
 
                 onGoMap = { goToMap() },
-                onGoProfile = { nav.navigate(Routes.PROFILE) { launchSingleTop = true } },
-                onGoLeaderboard = { nav.navigate(Routes.LEADERBOARD) { launchSingleTop = true } },
+                onGoProfile = { navController.navigate(Routes.PROFILE) { launchSingleTop = true } },
+                onGoLeaderboard = { navController.navigate(Routes.LEADERBOARD) { launchSingleTop = true } },
 
                 onGoGymList = {
                     requestGymList = true
@@ -164,8 +164,8 @@ fun AppNav() {
                 currentRoute = Routes.PROFILE,
 
                 onGoMap = { goToMap() },
-                onGoProfile = { nav.navigate(Routes.PROFILE) { launchSingleTop = true } },
-                onGoLeaderboard = { nav.navigate(Routes.LEADERBOARD) { launchSingleTop = true } },
+                onGoProfile = { navController.navigate(Routes.PROFILE) { launchSingleTop = true } },
+                onGoLeaderboard = { navController.navigate(Routes.LEADERBOARD) { launchSingleTop = true } },
 
                 onGoGymList = {
                     requestGymList = true

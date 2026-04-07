@@ -7,10 +7,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.findmygym.app.data.gyms.GymsRepository
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.findmygym.app.data.model.Gym
 import com.findmygym.app.data.model.GymComment
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -19,34 +18,25 @@ fun GymDetailsDialog(
     gym: Gym,
     onClose: () -> Unit
 ) {
-    val repo = remember { GymsRepository() }
-    val scope = rememberCoroutineScope()
+    val viewModel: MapViewModel = viewModel()
 
-    val comments by repo.streamComments(gym.id).collectAsState(initial = emptyList())
-
-    var hasRated by remember { mutableStateOf<Boolean?>(null) }
-    var ratingSending by remember { mutableStateOf(false) }
+    val comments = viewModel.comments
+    val hasRated = viewModel.hasRated
+    val ratingSending = viewModel.ratingSending
+    val commentSending = viewModel.commentSending
+    val error = viewModel.commentError
 
     var showAllComments by remember { mutableStateOf(false) }
-
     var commentText by remember { mutableStateOf("") }
-    var commentSending by remember { mutableStateOf(false) }
-
-    var error by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(gym.id) {
-        hasRated = null
-        error = null
-        try {
-            hasRated = repo.hasMyRating(gym.id)
-        } catch (_: Exception) {
-            hasRated = false
-        }
+        viewModel.loadGymDetails(gym.id)
     }
 
     val preview: List<GymComment> = remember(comments) {
         comments.takeLast(3).reversed()
     }
+
     val allSorted: List<GymComment> = remember(comments) {
         comments.reversed()
     }
@@ -56,7 +46,11 @@ fun GymDetailsDialog(
         title = { Text(gym.name.ifBlank { "Gym" }) },
         text = {
             Column {
-                Text(gym.type.ifBlank { "Gym" }, style = MaterialTheme.typography.bodySmall)
+
+                Text(
+                    gym.type.ifBlank { "Gym" },
+                    style = MaterialTheme.typography.bodySmall
+                )
 
                 if (gym.description.isNotBlank()) {
                     Spacer(Modifier.height(8.dp))
@@ -64,6 +58,7 @@ fun GymDetailsDialog(
                 }
 
                 Spacer(Modifier.height(12.dp))
+
                 Text(
                     "⭐ ${"%.1f".format(gym.avgRating)} (${gym.ratingCount})",
                     style = MaterialTheme.typography.titleSmall
@@ -73,7 +68,12 @@ fun GymDetailsDialog(
 
                 when (hasRated) {
                     null -> Text("Checking rating...", style = MaterialTheme.typography.bodySmall)
-                    true -> Text("You already rated this gym.", style = MaterialTheme.typography.bodySmall)
+
+                    true -> Text(
+                        "You already rated this gym.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+
                     false -> {
                         Text("Rate this gym", style = MaterialTheme.typography.titleSmall)
                         Spacer(Modifier.height(6.dp))
@@ -86,22 +86,13 @@ fun GymDetailsDialog(
                                 OutlinedButton(
                                     enabled = !ratingSending,
                                     onClick = {
-                                        error = null
-                                        ratingSending = true
-                                        scope.launch {
-                                            try {
-                                                repo.rateGym(gym.id, v)
-                                                hasRated = true
-                                            } catch (e: Exception) {
-                                                error = e.message ?: "Failed to rate"
-                                            } finally {
-                                                ratingSending = false
-                                            }
-                                        }
+                                        viewModel.rateGym(gym.id, v)
                                     },
                                     modifier = Modifier.size(44.dp),
                                     contentPadding = PaddingValues(0.dp)
-                                ) { Text("$v") }
+                                ) {
+                                    Text("$v")
+                                }
                             }
                         }
                     }
@@ -150,31 +141,27 @@ fun GymDetailsDialog(
                     onValueChange = { commentText = it },
                     label = { Text("Add a comment") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = false,
                     minLines = 2
                 )
 
                 Spacer(Modifier.height(8.dp))
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
                     TextButton(
                         enabled = !commentSending && commentText.trim().isNotBlank(),
                         onClick = {
                             val text = commentText.trim()
-                            commentSending = true
-                            error = null
-                            scope.launch {
-                                try {
-                                    repo.addComment(gym.id, text)
-                                    commentText = ""
-                                } catch (e: Exception) {
-                                    error = e.message ?: "Failed to comment"
-                                } finally {
-                                    commentSending = false
-                                }
+
+                            viewModel.addComment(gym.id, text) {
+                                commentText = ""
                             }
                         }
-                    ) { Text(if (commentSending) "Posting..." else "Post") }
+                    ) {
+                        Text(if (commentSending) "Posting..." else "Post")
+                    }
                 }
 
                 error?.let {
@@ -184,7 +171,9 @@ fun GymDetailsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onClose) { Text("Close") }
+            TextButton(onClick = onClose) {
+                Text("Close")
+            }
         }
     )
 }
@@ -192,10 +181,15 @@ fun GymDetailsDialog(
 @Composable
 private fun CommentRow(c: GymComment) {
     val sdf = remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()) }
-    val date = remember(c.createdAt) { sdf.format(Date(c.createdAt)) }
+    val date = remember(c.createdAt) {
+        sdf.format(Date(c.createdAt))
+    }
 
     Column {
-        Text(c.authorUsername.ifBlank { "User" }, style = MaterialTheme.typography.bodySmall)
+        Text(
+            c.authorUsername.ifBlank { "User" },
+            style = MaterialTheme.typography.bodySmall
+        )
         Text(c.text)
         Text(date, style = MaterialTheme.typography.bodySmall)
     }

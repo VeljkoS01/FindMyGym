@@ -23,7 +23,7 @@ fun RegisterScreen(
     onBackToLogin: () -> Unit,
     onGoMap: () -> Unit
 ) {
-    val vm: AuthViewModel = viewModel()
+    val viewModel: AuthViewModel = viewModel()
     val focusManager = LocalFocusManager.current
 
     var fullName by remember { mutableStateOf("") }
@@ -123,7 +123,7 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            (localError ?: vm.error)?.let {
+            (localError ?: viewModel.error)?.let {
                 Spacer(Modifier.height(12.dp))
                 Text(it, color = MaterialTheme.colorScheme.error)
             }
@@ -140,12 +140,12 @@ fun RegisterScreen(
                         return@Button
                     }
 
-                    vm.register(email, password, fullName, phone) { onGoMap() }
+                    viewModel.register(email, password, fullName, phone) { onGoMap() }
                 },
-                enabled = !vm.loading,
+                enabled = !viewModel.loading,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (vm.loading) "Creating..." else "Create account")
+                Text(if (viewModel.loading) "Creating..." else "Create account")
             }
 
             Spacer(Modifier.height(10.dp))

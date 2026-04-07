@@ -1,65 +1,88 @@
 package com.findmygym.app.ui.map
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.findmygym.app.data.gyms.GymsRepository
-import kotlinx.coroutines.launch
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun CommentDialog(
     gymId: String,
     onClose: () -> Unit
 ) {
-    val repo = remember { GymsRepository() }
-    val scope = rememberCoroutineScope()
+    val viewModel: MapViewModel = viewModel()
+
+    val hasRated = viewModel.hasRated
+    val error = viewModel.commentError
+    val sending = viewModel.commentSending
+    val ratingSending = viewModel.ratingSending
 
     var text by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-    var sending by remember { mutableStateOf(false) }
-    var ratingSending by remember { mutableStateOf(false) }
+
+    LaunchedEffect(gymId) {
+        viewModel.loadGymDetails(gymId)
+    }
 
     AlertDialog(
         onDismissRequest = onClose,
         title = { Text("Gym actions") },
         text = {
             Column {
-                Text("Rate this gym", style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.height(6.dp))
+                when (hasRated) {
+                    null -> {
+                        Text("Checking rating...", style = MaterialTheme.typography.bodySmall)
+                        Spacer(Modifier.height(10.dp))
+                    }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    (1..5).forEach { v ->
-                        OutlinedButton(
-                            enabled = !ratingSending,
-                            onClick = {
-                                error = null
-                                ratingSending = true
-                                scope.launch {
-                                    try {
-                                        repo.rateGym(gymId, v)
-                                    } catch (e: Exception) {
-                                        error = e.message ?: "Failed to rate"
-                                    } finally {
-                                        ratingSending = false
-                                    }
-                                }
-                            },
-                            modifier = Modifier.size(44.dp),
-                            contentPadding = PaddingValues(0.dp)
+                    true -> {
+                        Text("You already rated this gym.", style = MaterialTheme.typography.bodySmall)
+                        Spacer(Modifier.height(10.dp))
+                    }
+
+                    false -> {
+                        Text("Rate this gym", style = MaterialTheme.typography.titleSmall)
+                        Spacer(Modifier.height(6.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text("$v")
+                            (1..5).forEach { value ->
+                                OutlinedButton(
+                                    enabled = !ratingSending,
+                                    onClick = {
+                                        viewModel.rateGym(gymId, value)
+                                    },
+                                    modifier = Modifier.size(44.dp),
+                                    contentPadding = PaddingValues(0.dp)
+                                ) {
+                                    Text("$value")
+                                }
+                            }
                         }
+
+                        Spacer(Modifier.height(14.dp))
                     }
                 }
-
-                Spacer(Modifier.height(14.dp))
 
                 Text("Add comment", style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(6.dp))
@@ -81,18 +104,10 @@ fun CommentDialog(
             TextButton(
                 enabled = !sending && text.trim().isNotBlank(),
                 onClick = {
-                    sending = true
-                    error = null
-                    scope.launch {
-                        try {
-                            repo.addComment(gymId, text)
-                            text = ""
-                            onClose()
-                        } catch (e: Exception) {
-                            error = e.message ?: "Failed to comment"
-                        } finally {
-                            sending = false
-                        }
+                    val commentText = text.trim()
+                    viewModel.addComment(gymId, commentText) {
+                        text = ""
+                        onClose()
                     }
                 }
             ) {
@@ -102,8 +117,13 @@ fun CommentDialog(
         dismissButton = {
             TextButton(
                 enabled = !sending && !ratingSending,
-                onClick = onClose
-            ) { Text("Cancel") }
+                onClick = {
+                    viewModel.clearCommentError()
+                    onClose()
+                }
+            ) {
+                Text("Cancel")
+            }
         }
     )
 }

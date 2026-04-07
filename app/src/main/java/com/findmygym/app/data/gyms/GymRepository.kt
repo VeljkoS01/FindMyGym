@@ -13,7 +13,7 @@ import kotlinx.coroutines.tasks.await
 import com.google.firebase.firestore.SetOptions
 
 
-class GymsRepository(
+class GymRepository(
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val authRepo: AuthRepository = AuthRepository()
 ) {
