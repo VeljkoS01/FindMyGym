@@ -2,12 +2,12 @@ package com.findmygym.app.nav
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.findmygym.app.data.auth.AuthRepository
 import com.findmygym.app.ui.components.AppDrawerScaffold
 import com.findmygym.app.ui.leaderboard.LeaderboardScreen
 import com.findmygym.app.ui.login.LoginScreen
@@ -15,6 +15,8 @@ import com.findmygym.app.ui.login.RegisterScreen
 import com.findmygym.app.ui.map.MapScreen
 import com.findmygym.app.ui.profile.ProfileScreen
 import com.findmygym.app.ui.splash.SplashScreen
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.findmygym.app.ui.viewmodel.AuthViewModel
 
 @Composable
 fun AppNav() {
@@ -86,7 +88,7 @@ fun AppNav() {
         }
 
         composable(Routes.MAP) {
-            val authRepo = AuthRepository()
+            val authViewModel: AuthViewModel = viewModel()
 
             AppDrawerScaffold(
                 title = "Map",
@@ -102,7 +104,7 @@ fun AppNav() {
                 onOpenFilters = { requestFilters = true },
 
                 onLogout = {
-                    authRepo.logout()
+                    authViewModel.logout()
                     goToSplashClearBackstack()
                 }
             ) { inner ->
@@ -126,7 +128,7 @@ fun AppNav() {
         }
 
         composable(Routes.LEADERBOARD) {
-            val authRepo = AuthRepository()
+            val authViewModel: AuthViewModel = viewModel()
 
             AppDrawerScaffold(
                 title = "Leaderboard",
@@ -148,7 +150,7 @@ fun AppNav() {
                 onOpenFilters = null,
 
                 onLogout = {
-                    authRepo.logout()
+                    authViewModel.logout()
                     goToSplashClearBackstack()
                 }
             ) { inner ->
@@ -157,7 +159,7 @@ fun AppNav() {
         }
 
         composable(Routes.PROFILE) {
-            val authRepo = AuthRepository()
+            val authViewModel: AuthViewModel = viewModel()
 
             AppDrawerScaffold(
                 title = "Profile",
@@ -179,7 +181,7 @@ fun AppNav() {
                 onOpenFilters = null,
 
                 onLogout = {
-                    authRepo.logout()
+                    authViewModel.logout()
                     goToSplashClearBackstack()
                 }
             ) { inner ->

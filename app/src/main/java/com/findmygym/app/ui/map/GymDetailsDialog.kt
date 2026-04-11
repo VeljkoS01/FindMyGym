@@ -82,16 +82,16 @@ fun GymDetailsDialog(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            (1..5).forEach { v ->
+                            (1..5).forEach { value ->
                                 OutlinedButton(
                                     enabled = !ratingSending,
                                     onClick = {
-                                        viewModel.rateGym(gym.id, v)
+                                        viewModel.rateGym(gym.id, value)
                                     },
                                     modifier = Modifier.size(44.dp),
                                     contentPadding = PaddingValues(0.dp)
                                 ) {
-                                    Text("$v")
+                                    Text("$value")
                                 }
                             }
                         }
@@ -120,7 +120,7 @@ fun GymDetailsDialog(
                             items(allSorted) { c ->
                                 CommentRow(c)
                                 Spacer(Modifier.height(10.dp))
-                                Divider()
+                                HorizontalDivider()
                                 Spacer(Modifier.height(10.dp))
                             }
                         }

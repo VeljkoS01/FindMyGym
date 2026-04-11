@@ -6,7 +6,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.findmygym.app.ui.components.fmgTextFieldTextStyle
+import com.findmygym.app.ui.components.textFieldTextStyle
 
 
 @Composable
@@ -27,7 +27,7 @@ fun RadiusDropdown(
                 onValueChange = {},
                 label = { Text("Radius") },
                 readOnly = true,
-                textStyle = fmgTextFieldTextStyle(),
+                textStyle = textFieldTextStyle(),
                 modifier = Modifier.fillMaxWidth(),
                 trailingIcon = { Text("▼") }
             )
@@ -44,11 +44,11 @@ fun RadiusDropdown(
             onDismissRequest = { expanded = false },
             modifier = Modifier.fillMaxWidth()
         ) {
-            options.forEach { v ->
+            options.forEach { value ->
                 DropdownMenuItem(
-                    text = { Text(if (v == 0) "Any distance" else "$v km") },
+                    text = { Text(if (value == 0) "Any distance" else "$value km") },
                     onClick = {
-                        onChange(v)
+                        onChange(value)
                         expanded = false
                     }
                 )

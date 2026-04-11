@@ -44,7 +44,7 @@ fun MyGymsDialog(
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
-                        Divider()
+                        HorizontalDivider()
                     }
                 }
             }

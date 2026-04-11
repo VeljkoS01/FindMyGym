@@ -30,13 +30,13 @@ fun LeaderboardScreen(
         LazyColumn {
             itemsIndexed(viewModel.users) { idx, u ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
-                    Text("#${idx + 1}", modifier = Modifier.width(48.dp))
+                    Text("${idx + 1}.", modifier = Modifier.width(48.dp))
                     Column(Modifier.weight(1f)) {
                         Text(u.fullName.ifBlank { u.email })
                     }
                     Text("${u.points} pts")
                 }
-                Divider()
+                HorizontalDivider()
             }
         }
     }

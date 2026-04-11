@@ -12,15 +12,15 @@ private val Context.dataStore by preferencesDataStore(name = "findmygym_prefs")
 
 class RememberMeStore(private val context: Context) {
 
-    private val KEY_REMEMBER: Preferences.Key<Boolean> = booleanPreferencesKey("remember_me")
+    private val keyRemember: Preferences.Key<Boolean> = booleanPreferencesKey("remember_me")
 
     val rememberMeFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[KEY_REMEMBER] ?: false
+        prefs[keyRemember] ?: false
     }
 
     suspend fun setRememberMe(value: Boolean) {
         context.dataStore.edit { prefs ->
-            prefs[KEY_REMEMBER] = value
+            prefs[keyRemember] = value
         }
     }
 }

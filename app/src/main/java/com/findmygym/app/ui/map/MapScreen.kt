@@ -7,16 +7,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.findmygym.app.location.LocationTracker
 import com.findmygym.app.notifications.NotificationHelper
-import com.findmygym.app.ui.components.fmgTextFieldTextStyle
+import com.findmygym.app.ui.components.textFieldTextStyle
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
@@ -360,7 +358,7 @@ fun MapScreen(
                         value = gymName,
                         onValueChange = { gymName = it },
                         label = { Text("Name") },
-                        textStyle = fmgTextFieldTextStyle(),
+                        textStyle = textFieldTextStyle(),
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -370,7 +368,7 @@ fun MapScreen(
                         value = gymType,
                         onValueChange = { gymType = it },
                         label = { Text("Type") },
-                        textStyle = fmgTextFieldTextStyle(),
+                        textStyle = textFieldTextStyle(),
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -380,7 +378,7 @@ fun MapScreen(
                         value = gymDesc,
                         onValueChange = { gymDesc = it },
                         label = { Text("Description") },
-                        textStyle = fmgTextFieldTextStyle(),
+                        textStyle = textFieldTextStyle(),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -395,74 +393,4 @@ fun MapScreen(
             onClose = { selectedGymId = null }
         )
     }
-}
-
-@Composable
-private fun MapFiltersDialog(
-    initialQuery: String,
-    initialRadiusKm: Int,
-    onApply: (String, Int) -> Unit,
-    onClear: () -> Unit,
-    onCancel: () -> Unit
-) {
-    var q by rememberSaveable(initialQuery) { mutableStateOf(initialQuery) }
-    var r by rememberSaveable(initialRadiusKm) { mutableStateOf(initialRadiusKm) }
-
-    val focusManager = LocalFocusManager.current
-
-    AlertDialog(
-        onDismissRequest = onCancel,
-        title = { Text("Search filters") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = q,
-                    onValueChange = { q = it },
-                    label = { Text("Name / Type / Description") },
-                    textStyle = fmgTextFieldTextStyle(),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(10.dp))
-                RadiusDropdown(
-                    radiusKm = r,
-                    onChange = { r = it }
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    focusManager.clearFocus()
-                    onApply(q, r)
-                }
-            ) {
-                Text("Apply")
-            }
-        },
-        dismissButton = {
-            Row {
-                TextButton(
-                    onClick = {
-                        focusManager.clearFocus()
-                        q = ""
-                        r = 0
-                        onClear()
-                    }
-                ) {
-                    Text("Clear")
-                }
-
-                Spacer(Modifier.width(8.dp))
-
-                TextButton(
-                    onClick = {
-                        focusManager.clearFocus()
-                        onCancel()
-                    }
-                ) {
-                    Text("Cancel")
-                }
-            }
-        }
-    )
 }

@@ -20,7 +20,7 @@ class AuthRepository(
 
     suspend fun login(emailRaw: String, password: String) {
         val email = emailRaw.trim()
-        if (email.isBlank()) throw Exception("Please enter your email")
+        if (email.isBlank()) throw Exception("Enter your email")
 
         auth.signInWithEmailAndPassword(email, password).await()
         ensureUserDocExists()
@@ -34,13 +34,13 @@ class AuthRepository(
     ) {
         val email = emailRaw.trim()
 
-        if (email.isBlank()) throw Exception("Please enter your email")
+        if (email.isBlank()) throw Exception("Enter your email")
         if (password.length < 6) throw Exception("Password must be at least 6 characters")
-        if (fullName.trim().isBlank()) throw Exception("Please enter your full name")
-        if (phone.trim().isBlank()) throw Exception("Please enter your phone number")
+        if (fullName.trim().isBlank()) throw Exception("Enter your full name")
+        if (phone.trim().isBlank()) throw Exception("Enter your phone number")
 
         val result = auth.createUserWithEmailAndPassword(email, password).await()
-        val user = result.user ?: throw Exception("Registration failed. Please try again.")
+        val user = result.user ?: throw Exception("Registration failed. Try again.")
 
         val profile = AppUser(
             uid = user.uid,
@@ -116,7 +116,7 @@ class AuthRepository(
         }
     }
 
-    /* Brise korisnika kao i sve teretane koje je on napravio, ocene i komentare tim teretanama
+    /* Brisem korisnika kao i sve teretane koje je on napravio, ocene i komentare tim teretanama
     i sve ocene i komentare koje je korisnik ostavio na drugim teretanama */
     suspend fun deleteAccountAndData() {
         val user = auth.currentUser ?: throw Exception("Not logged in")
@@ -130,7 +130,7 @@ class AuthRepository(
         val myGymRefs = myGymsSnap.documents.map { it.reference }
         val myGymIds = myGymsSnap.documents.map { it.id }.toHashSet()
 
-        // Sve gyms (treba nam da ocistimo moje comments/ratings svuda)
+        // Sve gyms (da bih ocistio moje comments/ratings svuda)
         val allGymsSnap = db.collection("gyms").get(Source.SERVER).await()
 
         // 1) Obrisi moje ratings na tudjim gyms + preracunaj prosek
@@ -139,7 +139,7 @@ class AuthRepository(
                 val gymId = gymDoc.id
                 val gymRef = gymDoc.reference
 
-                // moje gyms brisemo kasnije cele
+                // moje gyms brisem kasnije cele
                 if (myGymIds.contains(gymId)) continue
 
                 // da li postoji moja ocena na ovoj teretani
@@ -177,7 +177,7 @@ class AuthRepository(
             throw Exception("Delete failed at: my ratings. ${e.message}")
         }
 
-        // 2) Obrisi moje comments na svim gyms
+        // 2) Brisem moje comments na svim gyms
         try {
             for (gymDoc in allGymsSnap.documents) {
                 val gymRef = gymDoc.reference
@@ -200,7 +200,7 @@ class AuthRepository(
             throw Exception("Delete failed at: my comments. ${e.message}")
         }
 
-        // 3) Obrisi moje gyms + njihove subkolekcije, pa gym doc
+        // 3) Brisem moje gyms + njihove subkolekcije, pa gym doc
         try {
             for (gymRef in myGymRefs) {
                 deleteCollectionInBatches(gymRef.collection("ratings"))

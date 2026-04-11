@@ -26,8 +26,8 @@ class GymRepository(
                     return@addSnapshotListener
                 }
                 val list = snap?.documents?.mapNotNull { doc ->
-                    val g = doc.toObject(Gym::class.java) ?: return@mapNotNull null
-                    g.copy(id = doc.id)
+                    val gym = doc.toObject(Gym::class.java) ?: return@mapNotNull null
+                    gym.copy(id = doc.id)
                 } ?: emptyList()
                 trySend(list)
             }

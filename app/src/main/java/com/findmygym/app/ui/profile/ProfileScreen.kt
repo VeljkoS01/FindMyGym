@@ -31,14 +31,14 @@ fun ProfileScreen(
     modifier: Modifier = Modifier,
     onFocusGym: (Double, Double) -> Unit,
     onAccountDeleted: () -> Unit,
-    vm: ProfileViewModel = viewModel()
+    viewModel: ProfileViewModel = viewModel()
 ) {
-    val profile = vm.profile
-    val loading = vm.loading
-    val error = vm.error
-    val deleting = vm.deleting
-    val deleteError = vm.deleteError
-    val myGyms = vm.myGyms
+    val profile = viewModel.profile
+    val loading = viewModel.loading
+    val error = viewModel.error
+    val deleting = viewModel.deleting
+    val deleteError = viewModel.deleteError
+    val myGyms = viewModel.myGyms
 
     var showMyGyms by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -63,25 +63,24 @@ fun ProfileScreen(
             Spacer(Modifier.height(12.dp))
         }
 
-        val user = profile
-        if (user == null) {
+        if (profile == null) {
             Text("No profile loaded.")
             return@Column
         }
 
         Text(
-            text = user.fullName.ifBlank { "User" },
+            text = profile.fullName.ifBlank { "User" },
             style = MaterialTheme.typography.titleLarge
         )
         Spacer(Modifier.height(6.dp))
-        Text(user.email)
+        Text(profile.email)
 
-        if (user.phone.isNotBlank()) {
-            Text(user.phone)
+        if (profile.phone.isNotBlank()) {
+            Text(profile.phone)
         }
 
         Spacer(Modifier.height(12.dp))
-        Text("Points: ${user.points}")
+        Text("Points: ${profile.points}")
 
         Spacer(Modifier.height(18.dp))
         HorizontalDivider()
@@ -99,7 +98,7 @@ fun ProfileScreen(
 
         OutlinedButton(
             onClick = {
-                vm.clearDeleteError()
+                viewModel.clearDeleteError()
                 showDeleteConfirm = true
             },
             modifier = Modifier.fillMaxWidth(),
@@ -137,13 +136,13 @@ fun ProfileScreen(
                 Text("Delete account")
             },
             text = {
-                Text("This will permanently delete your account and all gyms you added. This cannot be undone.")
+                Text("This will permanently delete your account, all gyms you added and all ratings and comments. This cannot be undone.")
             },
             confirmButton = {
                 TextButton(
                     enabled = !deleting,
                     onClick = {
-                        vm.clearDeleteError()
+                        viewModel.clearDeleteError()
                         showDeleteConfirm = false
                         showReauth = true
                     }
@@ -155,7 +154,7 @@ fun ProfileScreen(
                 TextButton(
                     enabled = !deleting,
                     onClick = {
-                        vm.clearDeleteError()
+                        viewModel.clearDeleteError()
                         showDeleteConfirm = false
                     }
                 ) {
@@ -175,7 +174,7 @@ fun ProfileScreen(
             },
             text = {
                 Column {
-                    Text("For security, enter your password to delete the account.")
+                    Text("Enter your password to delete the account.")
                     Spacer(Modifier.height(10.dp))
                     OutlinedTextField(
                         value = reauthPassword,
@@ -195,7 +194,7 @@ fun ProfileScreen(
                 TextButton(
                     enabled = !deleting && reauthPassword.isNotBlank(),
                     onClick = {
-                        vm.deleteAccount(
+                        viewModel.deleteAccount(
                             password = reauthPassword,
                             onSuccess = {
                                 reauthPassword = ""
@@ -213,7 +212,7 @@ fun ProfileScreen(
                     enabled = !deleting,
                     onClick = {
                         reauthPassword = ""
-                        vm.clearDeleteError()
+                        viewModel.clearDeleteError()
                         showReauth = false
                     }
                 ) {

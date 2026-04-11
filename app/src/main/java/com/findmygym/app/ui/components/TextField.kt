@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.TextStyle
 
 @Composable
-fun fmgTextFieldTextStyle(): TextStyle {
+fun textFieldTextStyle(): TextStyle {
     return LocalTextStyle.current.copy(
         color = MaterialTheme.colorScheme.onBackground
     )

@@ -22,7 +22,7 @@ fun GymListDialog(
     onDismiss: () -> Unit,
     onSelect: (Gym) -> Unit
 ) {
-    var sort by remember { mutableStateOf(GymSort.RATING) }
+    var sort by remember { mutableStateOf(GymSort.DISTANCE) }
 
     val sorted = remember(gyms, sort, myLatLng) {
         when (sort) {
@@ -49,15 +49,15 @@ fun GymListDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     FilterChip(
-                        selected = sort == GymSort.RATING,
-                        onClick = { sort = GymSort.RATING },
-                        label = { Text("Rating") }
-                    )
-                    FilterChip(
                         selected = sort == GymSort.DISTANCE,
                         onClick = { sort = GymSort.DISTANCE },
                         enabled = myLatLng != null,
                         label = { Text("Distance") }
+                    )
+                    FilterChip(
+                        selected = sort == GymSort.RATING,
+                        onClick = { sort = GymSort.RATING },
+                        label = { Text("Rating") }
                     )
                     FilterChip(
                         selected = sort == GymSort.NAME,
@@ -102,7 +102,7 @@ fun GymListDialog(
                                 Text(pretty, style = MaterialTheme.typography.bodySmall)
                             }
                         }
-                        Divider()
+                        HorizontalDivider()
                     }
                 }
             }

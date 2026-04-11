@@ -1,13 +1,13 @@
-package com.findmygym.app.ui.login
+package com.findmygym.app.ui.viewmodel
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.findmygym.app.data.auth.AuthRepository
-import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.findmygym.app.data.auth.AuthRepository
 import com.findmygym.app.data.auth.RememberMeStore
+import kotlinx.coroutines.launch
 
 class AuthViewModel(
     private val repo: AuthRepository = AuthRepository()
@@ -18,8 +18,6 @@ class AuthViewModel(
 
     var error by mutableStateOf<String?>(null)
         private set
-
-    fun clearError() { error = null }
 
     fun login(email: String, password: String, onSuccess: () -> Unit) {
         loading = true
@@ -61,5 +59,17 @@ class AuthViewModel(
         viewModelScope.launch {
             store.setRememberMe(value)
         }
+    }
+
+    fun logout() {
+        repo.logout()
+    }
+
+    fun showError(message: String?) {
+        error = message
+    }
+
+    fun clearError() {
+        error = null
     }
 }

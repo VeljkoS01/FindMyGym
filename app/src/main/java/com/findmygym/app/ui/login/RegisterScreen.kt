@@ -16,7 +16,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.findmygym.app.ui.components.fmgTextFieldTextStyle
+import com.findmygym.app.ui.components.textFieldTextStyle
+import com.findmygym.app.ui.viewmodel.AuthViewModel
 
 @Composable
 fun RegisterScreen(
@@ -35,8 +36,6 @@ fun RegisterScreen(
 
     var passVisible by remember { mutableStateOf(false) }
     var confirmVisible by remember { mutableStateOf(false) }
-
-    var localError by remember { mutableStateOf<String?>(null) }
 
     Surface(
         modifier = Modifier
@@ -65,7 +64,7 @@ fun RegisterScreen(
                 value = fullName,
                 onValueChange = { fullName = it },
                 label = { Text("Full Name") },
-                textStyle = fmgTextFieldTextStyle(),
+                textStyle = textFieldTextStyle(),
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(10.dp))
@@ -74,7 +73,7 @@ fun RegisterScreen(
                 value = email,
                 onValueChange = { email = it },
                 label = { Text("E-mail") },
-                textStyle = fmgTextFieldTextStyle(),
+                textStyle = textFieldTextStyle(),
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(10.dp))
@@ -83,7 +82,7 @@ fun RegisterScreen(
                 value = password,
                 onValueChange = { password = it },
                 label = { Text("Password (min 6)") },
-                textStyle = fmgTextFieldTextStyle(),
+                textStyle = textFieldTextStyle(),
                 visualTransformation = if (passVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(onClick = { passVisible = !passVisible }) {
@@ -101,7 +100,7 @@ fun RegisterScreen(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
                 label = { Text("Confirm Password") },
-                textStyle = fmgTextFieldTextStyle(),
+                textStyle = textFieldTextStyle(),
                 visualTransformation = if (confirmVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(onClick = { confirmVisible = !confirmVisible }) {
@@ -119,11 +118,11 @@ fun RegisterScreen(
                 value = phone,
                 onValueChange = { phone = it },
                 label = { Text("Phone Number") },
-                textStyle = fmgTextFieldTextStyle(),
+                textStyle = textFieldTextStyle(),
                 modifier = Modifier.fillMaxWidth()
             )
 
-            (localError ?: viewModel.error)?.let {
+            viewModel.error?.let {
                 Spacer(Modifier.height(12.dp))
                 Text(it, color = MaterialTheme.colorScheme.error)
             }
@@ -133,10 +132,10 @@ fun RegisterScreen(
             Button(
                 onClick = {
                     focusManager.clearFocus()
-                    localError = null
+                    viewModel.clearError()
 
                     if (password != confirmPassword) {
-                        localError = "Passwords do not match"
+                        viewModel.showError("Passwords do not match")
                         return@Button
                     }
 

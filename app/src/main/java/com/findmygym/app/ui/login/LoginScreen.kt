@@ -18,7 +18,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.findmygym.app.data.auth.RememberMeStore
-import com.findmygym.app.ui.components.fmgTextFieldTextStyle
+import com.findmygym.app.ui.components.textFieldTextStyle
+import com.findmygym.app.ui.viewmodel.AuthViewModel
 
 @Composable
 fun LoginScreen(
@@ -68,7 +69,7 @@ fun LoginScreen(
                 value = email,
                 onValueChange = { email = it },
                 label = { Text("Email") },
-                textStyle = fmgTextFieldTextStyle(),
+                textStyle = textFieldTextStyle(),
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -78,7 +79,7 @@ fun LoginScreen(
                 value = password,
                 onValueChange = { password = it },
                 label = { Text("Password") },
-                textStyle = fmgTextFieldTextStyle(),
+                textStyle = textFieldTextStyle(),
                 visualTransformation = if (passVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(onClick = { passVisible = !passVisible }) {

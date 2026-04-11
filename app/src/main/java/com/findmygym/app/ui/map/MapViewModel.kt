@@ -200,7 +200,4 @@ class MapViewModel(
         }
     }
 
-    fun clearCommentError() {
-        commentError = null
-    }
 }
