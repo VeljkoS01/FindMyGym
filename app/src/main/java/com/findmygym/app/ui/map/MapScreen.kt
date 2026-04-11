@@ -214,7 +214,6 @@ fun MapScreen(
                 pendingLatLng?.let { ll ->
                     Marker(
                         state = MarkerState(position = ll),
-                        title = "New gym here"
                     )
                 }
 
@@ -303,46 +302,6 @@ fun MapScreen(
                 pendingLatLng = null
                 pickingLocation = false
             },
-            confirmButton = {
-                TextButton(
-                    enabled = gymName.trim().isNotBlank(),
-                    onClick = {
-                        val target = pendingLatLng
-                        if (target == null) {
-                            localError = "Please pick a location on the map first."
-                            showAdd = false
-                            return@TextButton
-                        }
-
-                        viewModel.addGym(
-                            name = gymName,
-                            type = gymType,
-                            desc = gymDesc,
-                            lat = target.latitude,
-                            lng = target.longitude
-                        ) {
-                            gymName = ""
-                            gymType = "Gym"
-                            gymDesc = ""
-                            showAdd = false
-                            pendingLatLng = null
-                        }
-                    }
-                ) {
-                    Text("Add")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showAdd = false
-                        pendingLatLng = null
-                        pickingLocation = false
-                    }
-                ) {
-                    Text("Cancel")
-                }
-            },
             title = { Text("Add gym") },
             text = {
                 Column {
@@ -381,6 +340,46 @@ fun MapScreen(
                         textStyle = textFieldTextStyle(),
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showAdd = false
+                        pendingLatLng = null
+                        pickingLocation = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = gymName.trim().isNotBlank(),
+                    onClick = {
+                        val target = pendingLatLng
+                        if (target == null) {
+                            localError = "Please pick a location on the map first."
+                            showAdd = false
+                            return@TextButton
+                        }
+
+                        viewModel.addGym(
+                            name = gymName,
+                            type = gymType,
+                            desc = gymDesc,
+                            lat = target.latitude,
+                            lng = target.longitude
+                        ) {
+                            gymName = ""
+                            gymType = "Gym"
+                            gymDesc = ""
+                            showAdd = false
+                            pendingLatLng = null
+                        }
+                    }
+                ) {
+                    Text("Add")
                 }
             }
         )
