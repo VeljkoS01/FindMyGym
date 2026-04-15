@@ -235,14 +235,22 @@ fun MapScreen(
                     tonalElevation = 2.dp,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .padding(12.dp)
+                        .padding(all = 12.dp)
                 ) {
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Tap on map to place the gym pin")
+                        Text(
+                            text = "Tap on map to place the gym pin",
+                            modifier = Modifier.weight(1f)
+                        )
+
                         Spacer(Modifier.width(12.dp))
+
                         TextButton(
                             onClick = {
                                 pickingLocation = false

@@ -139,7 +139,7 @@ fun RegisterScreen(
                         return@Button
                     }
 
-                    viewModel.register(email, password, fullName, phone) { onGoMap() }
+                    viewModel.register(fullName, email, password, phone) { onGoMap() }
                 },
                 enabled = !viewModel.loading,
                 modifier = Modifier.fillMaxWidth()

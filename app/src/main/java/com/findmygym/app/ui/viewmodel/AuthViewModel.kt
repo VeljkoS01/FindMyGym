@@ -35,9 +35,9 @@ class AuthViewModel(
     }
 
     fun register(
+        fullName: String,
         email: String,
         password: String,
-        fullName: String,
         phone: String,
         onSuccess: () -> Unit
     ) {
@@ -45,7 +45,7 @@ class AuthViewModel(
         error = null
         viewModelScope.launch {
             try {
-                repo.register(email, password, fullName, phone)
+                repo.register(fullName,email, password, phone)
                 onSuccess()
             } catch (e: Exception) {
                 error = e.message ?: "Registration failed"

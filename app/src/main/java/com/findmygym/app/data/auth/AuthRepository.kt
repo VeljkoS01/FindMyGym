@@ -1,5 +1,6 @@
 package com.findmygym.app.data.auth
 
+import android.util.Log
 import com.findmygym.app.data.model.AppUser
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
@@ -27,16 +28,18 @@ class AuthRepository(
     }
 
     suspend fun register(
+        fullName: String,
         emailRaw: String,
         password: String,
-        fullName: String,
         phone: String
     ) {
         val email = emailRaw.trim()
+        Log.d("REGISTER_DEBUG", "EMAIL RAW: [$emailRaw]")
+        Log.d("REGISTER_DEBUG", "EMAIL TRIMMED: [$email]")
 
+        if (fullName.trim().isBlank()) throw Exception("Enter your full name")
         if (email.isBlank()) throw Exception("Enter your email")
         if (password.length < 6) throw Exception("Password must be at least 6 characters")
-        if (fullName.trim().isBlank()) throw Exception("Enter your full name")
         if (phone.trim().isBlank()) throw Exception("Enter your phone number")
 
         val result = auth.createUserWithEmailAndPassword(email, password).await()
