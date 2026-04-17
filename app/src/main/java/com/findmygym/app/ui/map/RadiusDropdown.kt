@@ -16,7 +16,7 @@ fun RadiusDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    val options = listOf(0, 1, 3, 5, 10)
+    val options = listOf(0, 1, 2, 3, 4, 5, 7, 8, 9, 10)
     val label = if (radiusKm == 0) "Any distance" else "$radiusKm km"
 
     Column(Modifier.fillMaxWidth()) {

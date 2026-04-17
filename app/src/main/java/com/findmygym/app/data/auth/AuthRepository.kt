@@ -34,8 +34,6 @@ class AuthRepository(
         phone: String
     ) {
         val email = emailRaw.trim()
-        Log.d("REGISTER_DEBUG", "EMAIL RAW: [$emailRaw]")
-        Log.d("REGISTER_DEBUG", "EMAIL TRIMMED: [$email]")
 
         if (fullName.trim().isBlank()) throw Exception("Enter your full name")
         if (email.isBlank()) throw Exception("Enter your email")
