@@ -10,21 +10,28 @@ import com.findmygym.app.data.auth.RememberMeStore
 import kotlinx.coroutines.launch
 
 class AuthViewModel(
-    private val repo: AuthRepository = AuthRepository()
+    //AuthRepository za komunikaciju sa Firebase-om
+    private val authRepository: AuthRepository = AuthRepository()
 ) : ViewModel() {
 
+    //Prilikom login-a koristi se za prikaz loading stanja
     var loading by mutableStateOf(false)
         private set
 
+    //Cuva poruke za error
     var error by mutableStateOf<String?>(null)
         private set
 
+
     fun login(email: String, password: String, onSuccess: () -> Unit) {
+        //Kada korisnik klikne login, ukljucuje se loading i brisu se stare greske
         loading = true
-        error = null
+        clearError()
+
         viewModelScope.launch {
             try {
-                repo.login(email, password)
+                //Poziv Repository za login i poziva se callback za dalju navigaciju
+                authRepository.login(email, password)
                 onSuccess()
             } catch (e: Exception) {
                 error = e.message ?: "Login failed"
@@ -41,11 +48,14 @@ class AuthViewModel(
         phone: String,
         onSuccess: () -> Unit
     ) {
+        //Prilikom register-a koristi se za prikaz loading stanja
         loading = true
-        error = null
+        clearError()
+
         viewModelScope.launch {
             try {
-                repo.register(fullName,email, password, phone)
+                //Poziv Repository za register i poziva se callback za dalju navigaciju
+                authRepository.register(fullName,email, password, phone)
                 onSuccess()
             } catch (e: Exception) {
                 error = e.message ?: "Registration failed"
@@ -56,13 +66,14 @@ class AuthViewModel(
     }
 
     fun setRememberMe(store: RememberMeStore, value: Boolean) {
+        // Upis vrednosti "Remember me" u lokalni DataStore
         viewModelScope.launch {
             store.setRememberMe(value)
         }
     }
 
     fun logout() {
-        repo.logout()
+        authRepository.logout()
     }
 
     fun showError(message: String?) {

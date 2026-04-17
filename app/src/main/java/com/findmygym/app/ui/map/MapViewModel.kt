@@ -13,37 +13,51 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class MapViewModel(
+    //Repository za teretane, komentare i ocene
     private val gymRepository: GymRepository = GymRepository(),
+
+    //Repository za korisnika i njegovu lokaciju
     private val authRepository: AuthRepository = AuthRepository()
 ) : ViewModel() {
 
+    //Sve teretane iz baze
     var gyms by mutableStateOf<List<Gym>>(emptyList())
         private set
 
+    //Greske
     var error by mutableStateOf<String?>(null)
         private set
 
+    //Trenutni tekstualni filter
     var query by mutableStateOf("")
+
+    //Trenutni radius filter u kilometrima
     var radiusKm by mutableStateOf(0)
 
+    //Komentari za trenutno izabranu teretanu
     var comments by mutableStateOf<List<GymComment>>(emptyList())
         private set
 
+    //Da li je korisnik vec ocenio izabranu teretanu
     var hasRated by mutableStateOf<Boolean?>(null)
         private set
 
+    //Greska vezana za komentare i rating
     var commentError by mutableStateOf<String?>(null)
         private set
 
+    //Loading stanja za slanje ocene i komentara
     var ratingSending by mutableStateOf(false)
         private set
 
     var commentSending by mutableStateOf(false)
         private set
 
+    //Pamtimo poslednju notifikovanu teretanu i vreme notifikacije da ne bi bilo spama
     private var lastNotifiedGymId: String? = null
     private var lastNotifiedAt: Long = 0L
 
+    //Odmah po kreiranju ViewModel-a pocinjemo da slusamo gyms kolekciju
     init {
         observeGyms()
     }
@@ -51,6 +65,7 @@ class MapViewModel(
     private fun observeGyms() {
         viewModelScope.launch {
             try {
+                //Prati promene teretana u realnom vremenu
                 gymRepository.streamGyms().collectLatest { list ->
                     gyms = list
                 }
@@ -71,6 +86,7 @@ class MapViewModel(
         error = null
         viewModelScope.launch {
             try {
+                //Dodaje novu teretanu u bazu
                 gymRepository.addGym(name, type, desc, lat, lng)
                 onDone()
             } catch (e: Exception) {
@@ -82,6 +98,7 @@ class MapViewModel(
     fun updateMyLocation(lat: Double, lng: Double) {
         viewModelScope.launch {
             try {
+                //Periodican upis poslednje lokacije korisnika u bazu
                 authRepository.updateMyLocation(lat, lng)
             } catch (_: Exception) {
             }
@@ -93,14 +110,16 @@ class MapViewModel(
         myLng: Double,
         onNotify: (String, String) -> Unit
     ) {
+        //Najbliza teretana u radiusu od 200m
         val near = gyms
             .map { gym -> gym to distanceKm(myLat, myLng, gym.lat, gym.lng) }
             .filter { it.second <= 0.2 }
             .minByOrNull { it.second }
             ?.first
 
+        //Cooldown za notifikacije
         val now = System.currentTimeMillis()
-        val cooldownOk = now - lastNotifiedAt > 3 * 60 * 1000
+        val cooldownOk = now - lastNotifiedAt > 180000 //3min
 
         if (near != null && (near.id != lastNotifiedGymId || cooldownOk)) {
             lastNotifiedGymId = near.id
@@ -131,10 +150,12 @@ class MapViewModel(
             return distance <= radiusKm.toDouble()
         }
 
+        //Primena tekstualnog i radius filtera nad listom teretana
         return gyms.filter { matches(it) }.filter { withinRadius(it) }
     }
 
     fun distanceKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        //Haverisinova formula za racunanje udaljenosti izmedju dve geografske tacke
         val r = 6371.0
         val dLat = Math.toRadians(lat2 - lat1)
         val dLon = Math.toRadians(lon2 - lon1)
@@ -146,11 +167,13 @@ class MapViewModel(
     }
 
     fun loadGymDetails(gymId: String) {
+        //Reset stanja pri otvaranju detalja nove teretane
         hasRated = null
         commentError = null
 
         viewModelScope.launch {
             try {
+                //Pratimo komentare za izabranu teretanu u realnom vremenu
                 gymRepository.streamComments(gymId).collectLatest { list ->
                     comments = list
                 }
@@ -161,6 +184,7 @@ class MapViewModel(
 
         viewModelScope.launch {
             try {
+                //Proveravamo da li je korisnik vec ostavio ocenu
                 hasRated = gymRepository.hasMyRating(gymId)
             } catch (_: Exception) {
                 hasRated = false
@@ -174,6 +198,7 @@ class MapViewModel(
 
         viewModelScope.launch {
             try {
+                //Upis ocene za izabranu teretanu
                 gymRepository.rateGym(gymId, value)
                 hasRated = true
             } catch (e: Exception) {
@@ -190,6 +215,7 @@ class MapViewModel(
 
         viewModelScope.launch {
             try {
+                //Dodavanje komentara za izabranu teretanu
                 gymRepository.addComment(gymId, text)
                 onDone()
             } catch (e: Exception) {

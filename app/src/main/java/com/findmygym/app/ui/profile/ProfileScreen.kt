@@ -33,6 +33,7 @@ fun ProfileScreen(
     onAccountDeleted: () -> Unit,
     viewModel: ProfileViewModel = viewModel()
 ) {
+    //Stanja iz ViewModela
     val profile = viewModel.profile
     val loading = viewModel.loading
     val error = viewModel.error
@@ -40,6 +41,7 @@ fun ProfileScreen(
     val deleteError = viewModel.deleteError
     val myGyms = viewModel.myGyms
 
+    //Lokalno stanje za prikaz dijaloga
     var showMyGyms by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showReauth by remember { mutableStateOf(false) }
@@ -51,10 +53,12 @@ fun ProfileScreen(
             .padding(16.dp)
     ) {
         if (loading) {
+            //Loading prikaz
             CircularProgressIndicator()
             return@Column
         }
 
+        //Ako postoji greska pri ucitavanju profila
         error?.let {
             Text(
                 text = it,
@@ -63,11 +67,13 @@ fun ProfileScreen(
             Spacer(Modifier.height(12.dp))
         }
 
+        //Ako se ne ucita profil, obavestenje o tome
         if (profile == null) {
             Text("No profile loaded.")
             return@Column
         }
 
+        //Podaci o korisniku
         Text(
             text = profile.fullName.ifBlank { "User" },
             style = MaterialTheme.typography.titleLarge
@@ -86,6 +92,7 @@ fun ProfileScreen(
         HorizontalDivider()
         Spacer(Modifier.height(12.dp))
 
+        //Otvara dijalog sa listom mojih teretana
         OutlinedButton(
             onClick = { showMyGyms = true },
             modifier = Modifier.fillMaxWidth(),
@@ -96,6 +103,7 @@ fun ProfileScreen(
 
         Spacer(Modifier.height(10.dp))
 
+        //Dugme za Delete account
         OutlinedButton(
             onClick = {
                 viewModel.clearDeleteError()
@@ -116,10 +124,12 @@ fun ProfileScreen(
         }
     }
 
+
     if (showMyGyms) {
         MyGymsDialog(
             gyms = myGyms,
             onDismiss = { showMyGyms = false },
+            //Zatvaranje dijaloga i fokusiranje izabrane teretane na mapi
             onSelect = { gym ->
                 showMyGyms = false
                 onFocusGym(gym.lat, gym.lng)
@@ -130,6 +140,7 @@ fun ProfileScreen(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = {
+                //Dok traje brisanje ne dozvoljavamo zatvaranje dijaloga
                 if (!deleting) showDeleteConfirm = false
             },
             title = {
@@ -142,6 +153,7 @@ fun ProfileScreen(
                 TextButton(
                     enabled = !deleting,
                     onClick = {
+                        //Nakon potvrde, prelazimmo na reautentikaciju
                         viewModel.clearDeleteError()
                         showDeleteConfirm = false
                         showReauth = true
@@ -167,6 +179,7 @@ fun ProfileScreen(
     if (showReauth) {
         AlertDialog(
             onDismissRequest = {
+                //Dok traje brisanje ne dozvoljavamo zatvaranje dijaloga
                 if (!deleting) showReauth = false
             },
             title = {

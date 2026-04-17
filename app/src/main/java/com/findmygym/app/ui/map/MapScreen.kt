@@ -34,28 +34,37 @@ fun MapScreen(
     onFocusConsumed: () -> Unit
 ) {
     val context = LocalContext.current
+    //Tracker koristimo za pracenje lokacije korisnika
     val tracker = remember(context) { LocationTracker(context) }
     val viewModel: MapViewModel = viewModel()
     val scope = rememberCoroutineScope()
 
+    //Lokalna UI stanja za dozvole, lokaciju i greske
     var hasLocationPermission by remember { mutableStateOf(false) }
     var myLatLng by remember { mutableStateOf<LatLng?>(null) }
     var localError by remember { mutableStateOf<String?>(null) }
 
+    //Pamtimo da li smo vec jednom centrirali mapu na korisnika
     var hasCenteredOnMe by remember { mutableStateOf(false) }
+
+    //ID trenutno izabrane teretane za details dialog
     var selectedGymId by remember { mutableStateOf<String?>(null) }
 
+    //Stanja za add gym
     var showAdd by remember { mutableStateOf(false) }
     var gymName by remember { mutableStateOf("") }
     var gymType by remember { mutableStateOf("Gym") }
     var gymDesc by remember { mutableStateOf("") }
 
+    //Kada je pickingLocation ukljucen, korisnik bira tacku na mapi
     var pickingLocation by remember { mutableStateOf(false) }
     var pendingLatLng by remember { mutableStateOf<LatLng?>(null) }
 
+    //Stanja za listu teretana i filter dijalog
     var showGymList by remember { mutableStateOf(false) }
     var showFilters by remember { mutableStateOf(false) }
 
+    //Na Android 13+ notifikacije zahtevaju posebnu dozvolu
     var notifPermissionOk by remember { mutableStateOf(Build.VERSION.SDK_INT < 33) }
 
     val notifLauncher = rememberLauncherForActivityResult(
@@ -73,6 +82,7 @@ fun MapScreen(
         if (!ok) localError = "Location permission denied"
     }
 
+    //Pri prvom otvaranju trazimo lokacijsku dozvolu
     LaunchedEffect(Unit) {
         locationPermLauncher.launch(
             arrayOf(
@@ -81,11 +91,13 @@ fun MapScreen(
             )
         )
 
+        //Na Android 13+ trazimo i dozvolu za notifikacije
         if (Build.VERSION.SDK_INT >= 33) {
             notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 
+    //Otvaranje lista teretana
     LaunchedEffect(requestGymList) {
         if (requestGymList) {
             showGymList = true
@@ -93,6 +105,7 @@ fun MapScreen(
         }
     }
 
+    //Otvaranje filter dialoga
     LaunchedEffect(requestFilters) {
         if (requestFilters) {
             showFilters = true
@@ -100,6 +113,7 @@ fun MapScreen(
         }
     }
 
+    //Pokrece se dodavanje nove teretane
     LaunchedEffect(requestAddGym) {
         if (requestAddGym) {
             localError = null
@@ -110,7 +124,8 @@ fun MapScreen(
         }
     }
 
-    val fallback = LatLng(43.3209, 21.8958)
+    //Fallback pozicija ako jos nemamo korisnicku lokaciju
+    val fallback = LatLng(43.3209, 21.8958) //Centar Nisa
     val cameraPositionState = rememberCameraPositionState {
         position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(fallback, 13f)
     }
@@ -127,17 +142,20 @@ fun MapScreen(
                 val ll = LatLng(loc.latitude, loc.longitude)
                 val now = System.currentTimeMillis()
 
+                //Lokaciju osvezavamo otprilike jednom u sekundi
                 if (now - lastUiUpdateMs >= 1000) {
                     myLatLng = ll
                     lastUiUpdateMs = now
                 }
 
+                //Prvi put kada dobijemo lokaciju centriramo mapu na korisnika
                 if (!hasCenteredOnMe) {
                     cameraPositionState.position =
                         com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(ll, 16f)
                     hasCenteredOnMe = true
                 }
 
+                //Povremeno saljemo lokaciju u bazu umesto pri svakom update-u
                 if (now - lastSentMs >= 10_000) {
                     lastSentMs = now
                     viewModel.updateMyLocation(loc.latitude, loc.longitude)
@@ -154,6 +172,7 @@ fun MapScreen(
         val ll = myLatLng ?: return@LaunchedEffect
         NotificationHelper.ensureChannel(context)
 
+        //Kad se promeni lokacija ili lista teretana proveravamo da li je neka u blizini
         viewModel.checkNearbyGymsAndNotify(
             myLat = ll.latitude,
             myLng = ll.longitude
@@ -166,6 +185,7 @@ fun MapScreen(
         }
     }
 
+    //Animiranje kamere do tacke
     LaunchedEffect(focusLat, focusLng) {
         if (focusLat != null && focusLng != null) {
             val target = LatLng(focusLat, focusLng)
@@ -196,6 +216,7 @@ fun MapScreen(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
                 properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
+                //Klik na mapu postavlja pin za novu teretanu
                 onMapClick = { ll ->
                     if (pickingLocation) {
                         pendingLatLng = ll
@@ -203,6 +224,7 @@ fun MapScreen(
                         pickingLocation = false
                     }
                 },
+                //I long click moze da postavi pin
                 onMapLongClick = { ll ->
                     if (pickingLocation) {
                         pendingLatLng = ll
@@ -251,6 +273,7 @@ fun MapScreen(
 
                         Spacer(Modifier.width(12.dp))
 
+                        //Prekidamo add gym flow ako korisnik odustane
                         TextButton(
                             onClick = {
                                 pickingLocation = false
@@ -277,6 +300,7 @@ fun MapScreen(
             onDismiss = { showGymList = false },
             onSelect = { gym ->
                 showGymList = false
+                //Iz liste biramo teretanu i centriramo mapu na nju
                 scope.launch {
                     val target = LatLng(gym.lat, gym.lng)
                     val update = CameraUpdateFactory.newLatLngZoom(target, 16f)
@@ -290,6 +314,7 @@ fun MapScreen(
         MapFiltersDialog(
             initialQuery = viewModel.query,
             initialRadiusKm = viewModel.radiusKm,
+            //Cuvamo izabrane filtere u ViewModel-u
             onApply = { query, radius ->
                 viewModel.query = query
                 viewModel.radiusKm = radius
@@ -372,6 +397,7 @@ fun MapScreen(
                             return@TextButton
                         }
 
+                        //Dodajemo novu teretanu na vec izabranoj lokaciji
                         viewModel.addGym(
                             name = gymName,
                             type = gymType,
@@ -393,6 +419,7 @@ fun MapScreen(
         )
     }
 
+    //Nalazimo trenutno izabranu teretanu i otvaramo njen details dijalog
     val selectedGym = viewModel.gyms.firstOrNull { it.id == selectedGymId }
     selectedGym?.let { gym ->
         GymDetailsDialog(

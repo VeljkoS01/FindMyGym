@@ -20,14 +20,19 @@ fun SplashScreen(
     onGoMap: () -> Unit
 ) {
     val context = LocalContext.current
+    //Datastore za remember me opciju
     val rememberStore = remember { RememberMeStore(context) }
+    //Koristi se da se proveri da li je korisnik ulogovan
     val repo = remember { AuthRepository() }
 
     LaunchedEffect(Unit) {
+        //Da li je ukljucen remember me
         val rememberMe = rememberStore.rememberMeFlow.first()
 
+        //Ako nije bio ukljucen remember me, prvo ide logout
         if (!rememberMe) repo.logout()
 
+        //Ako jeste ukljucen i korisnik je ulogovan ide na mapu, u suprotnom na login
         if (rememberMe && repo.isLoggedIn()) onGoMap() else onGoLogin()
     }
 
@@ -35,6 +40,7 @@ fun SplashScreen(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
+        //Loading indikator
         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
     }
 }

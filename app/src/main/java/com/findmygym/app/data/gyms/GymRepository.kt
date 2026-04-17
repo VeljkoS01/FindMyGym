@@ -14,17 +14,22 @@ import com.google.firebase.firestore.SetOptions
 
 
 class GymRepository(
+    //FirebaseAuth sluzi za rad sa teretanama, komentarima i ocenama
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
+    // Firestore da znamo koji je korisnik prijavljen
     private val authRepo: AuthRepository = AuthRepository()
 ) {
 
     fun streamGyms(): Flow<List<Gym>> = callbackFlow {
+        //Slusa promene u "gyms" kolekciji u realnom vremenu
         val reg = db.collection("gyms")
             .addSnapshotListener { snap, err ->
                 if (err != null) {
                     close(err)
                     return@addSnapshotListener
                 }
+
+                // Svaki dokument pretvaram u Gym objekat i postavljam id
                 val list = snap?.documents?.mapNotNull { doc ->
                     val gym = doc.toObject(Gym::class.java) ?: return@mapNotNull null
                     gym.copy(id = doc.id)
@@ -35,6 +40,7 @@ class GymRepository(
         awaitClose { reg.remove() }
     }
 
+    //Vraca samo teretane korisnika
     fun streamMyGyms(): Flow<List<Gym>> {
         val uid = authRepo.currentUid()
         return streamGyms().map { list ->
@@ -43,6 +49,7 @@ class GymRepository(
                 .sortedByDescending { it.createdAt }
         }
     }
+
 
     suspend fun addGym(
         name: String,
@@ -54,8 +61,10 @@ class GymRepository(
         val uid = authRepo.currentUid() ?: throw Exception("Not logged in")
         val me = authRepo.getMyProfile() ?: throw Exception("No profile")
 
+        //Kreiramo novi dokument sa automatski generisanim id-em
         val gymRef = db.collection("gyms").document()
 
+        //Formiranje objekta nove teretane
         db.runTransaction { tx ->
             val gym = Gym(
                 id = gymRef.id,
@@ -71,8 +80,10 @@ class GymRepository(
                 ratingCount = 0
             )
 
+            //Upis teretane u bazu
             tx.set(gymRef, gym)
 
+            //Dodavanje poena korisniku za kreiranje teretane
             val userRef = db.collection("users").document(uid)
             tx.set(userRef, mapOf("points" to FieldValue.increment(5)), SetOptions.merge())
 
@@ -82,6 +93,7 @@ class GymRepository(
     }
 
     fun streamComments(gymId: String): Flow<List<GymComment>> = callbackFlow {
+        //Slusa orimene komentara za konkretnu teretanu
         val reg = db.collection("gyms").document(gymId)
             .collection("comments")
             .orderBy("createdAt")
@@ -91,6 +103,7 @@ class GymRepository(
                     return@addSnapshotListener
                 }
 
+                //Svaki comment dokument pretvaramo u GymComment objekat
                 val list = snap?.documents?.mapNotNull { doc ->
                     val c = doc.toObject(GymComment::class.java) ?: return@mapNotNull null
                     c.copy(id = doc.id)
@@ -106,6 +119,7 @@ class GymRepository(
         val uid = authRepo.currentUid() ?: throw Exception("Not logged in")
         val me = authRepo.getMyProfile() ?: throw Exception("No profile")
 
+        //Kreiramo novi dokument komentara u comments subkolekci
         val commentRef = db.collection("gyms").document(gymId)
             .collection("comments").document()
 
@@ -119,8 +133,10 @@ class GymRepository(
                 createdAt = System.currentTimeMillis()
             )
 
+            //Upis komentara
             tx.set(commentRef, c)
 
+            //Dodavanje poena korisniku za ostavljen komentar
             val userRef = db.collection("users").document(uid)
             tx.set(userRef, mapOf("points" to FieldValue.increment(2)), SetOptions.merge())
 
@@ -147,6 +163,7 @@ class GymRepository(
                 throw IllegalStateException("Gym not found")
             }
 
+            //Jedan korisnik moze da oceni jednu teretanu samo jednom
             if (ratingSnap.exists()) {
                 throw IllegalStateException("You already rated this gym")
             }
@@ -154,9 +171,11 @@ class GymRepository(
             val oldAvg = (gymSnap.getDouble("avgRating") ?: 0.0)
             val oldCount = (gymSnap.getLong("ratingCount") ?: 0L)
 
+            //Izracunavanje novog proseka nakon dodavanja nove ocene
             val newCount = oldCount + 1
             val newAvg = ((oldAvg * oldCount) + value) / newCount.toDouble()
 
+            //cuvanje pojedinacne ocene u ratings subkolekciji
             tx.set(
                 ratingRef,
                 mapOf(
@@ -167,6 +186,7 @@ class GymRepository(
                 )
             )
 
+            //Azuriranje prosecne ocene i broja ocena na gym dokumentu
             tx.update(
                 gymRef,
                 mapOf(
@@ -175,6 +195,7 @@ class GymRepository(
                 )
             )
 
+            //Dodavanje poena korisniku za ostavljenu ocenu
             tx.set(
                 userRef,
                 mapOf("points" to FieldValue.increment(1)),
@@ -188,6 +209,8 @@ class GymRepository(
 
     suspend fun hasMyRating(gymId: String): Boolean {
         val uid = authRepo.currentUid() ?: return false
+
+        //Proverava da li je trenutni korisnik vec dao ocenu na teretani
         val snap = db.collection("gyms").document(gymId)
             .collection("ratings").document(uid)
             .get().await()

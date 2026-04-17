@@ -14,8 +14,10 @@ fun RadiusDropdown(
     radiusKm: Int,
     onChange: (Int) -> Unit
 ) {
+    //Stanje koje odredjuje da li je dropdown otvoren
     var expanded by remember { mutableStateOf(false) }
 
+    //Ponudjene opcije za radius filter
     val options = listOf(0, 1, 2, 3, 4, 5, 7, 8, 9, 10)
     val label = if (radiusKm == 0) "Any distance" else "$radiusKm km"
 
@@ -48,6 +50,7 @@ fun RadiusDropdown(
                 DropdownMenuItem(
                     text = { Text(if (value == 0) "Any distance" else "$value km") },
                     onClick = {
+                        //Slanje nove vrednosti parent-u i zatvaranje menia
                         onChange(value)
                         expanded = false
                     }

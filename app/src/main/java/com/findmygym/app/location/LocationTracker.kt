@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.callbackFlow
 
 class LocationTracker(context: Context) {
 
+    //FusedLocationProviderClient je Google servis za dobijanje lokacije uredjaja
     private val client = LocationServices.getFusedLocationProviderClient(context)
 
     @SuppressLint("MissingPermission")
@@ -23,6 +24,7 @@ class LocationTracker(context: Context) {
             .setMinUpdateDistanceMeters(minDistanceM)
             .build()
 
+        //Callback koji se poziva svaki put kada stigne nova lokacija
         val callback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 val loc = result.lastLocation ?: return
@@ -30,7 +32,9 @@ class LocationTracker(context: Context) {
             }
         }
 
+        //Pokretanje slusanja lokacijskih promena na glavnom thread-u
         client.requestLocationUpdates(request, callback, Looper.getMainLooper())
+        //Kada Flow vise nije potreban, uklanjamo callback da ne bi trosili resurse
         awaitClose { client.removeLocationUpdates(callback) }
     }
 }

@@ -11,11 +11,14 @@ import com.google.firebase.firestore.Source
 import kotlinx.coroutines.tasks.await
 
 class AuthRepository(
+    //FirebaseAuth sluzi za login, register i logout korisnika
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    // Firestore sluzi za cuvanje dodatnih podataka o korisniku i gym-ovima
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
-
+    //Da li je prijavljen korisnk
     fun isLoggedIn(): Boolean = auth.currentUser != null
+    //Vraca Uid trenutnog korisnika
     fun currentUid(): String? = auth.currentUser?.uid
     fun logout() = auth.signOut()
 
@@ -23,7 +26,10 @@ class AuthRepository(
         val email = emailRaw.trim()
         if (email.isBlank()) throw Exception("Enter your email")
 
+        //Firebase prijava korisnika
         auth.signInWithEmailAndPassword(email, password).await()
+
+        //Ukoliko je doslo do greske, pravi se minimalan profil da aplikacije ne pukne
         ensureUserDocExists()
     }
 
@@ -35,14 +41,17 @@ class AuthRepository(
     ) {
         val email = emailRaw.trim()
 
+        //Validacija unetih podataka pre registracije
         if (fullName.trim().isBlank()) throw Exception("Enter your full name")
         if (email.isBlank()) throw Exception("Enter your email")
         if (password.length < 6) throw Exception("Password must be at least 6 characters")
         if (phone.trim().isBlank()) throw Exception("Enter your phone number")
 
+        //Kreiranje auth naloga u Firebase Authentication
         val result = auth.createUserWithEmailAndPassword(email, password).await()
         val user = result.user ?: throw Exception("Registration failed. Try again.")
 
+        //Kreiranje profila za Firestore bazu
         val profile = AppUser(
             uid = user.uid,
             email = email,
@@ -51,8 +60,10 @@ class AuthRepository(
             points = 0
         )
 
+        //Dodavanje profila u Firestore bazu
         db.collection("users").document(user.uid).set(profile).await()
     }
+
 
     suspend fun getMyProfile(): AppUser? {
         val uid = currentUid() ?: return null
@@ -60,6 +71,7 @@ class AuthRepository(
         val ref = db.collection("users").document(uid)
         val snap = ref.get().await()
 
+        //Ako korisnik ne postoji u bazi, pravi se minimalna verzija profila
         if (!snap.exists()) {
             val email = auth.currentUser?.email.orEmpty()
             val repaired = AppUser(
@@ -72,13 +84,14 @@ class AuthRepository(
             ref.set(repaired, SetOptions.merge()).await()
             return repaired
         }
-
+        //Pretvara Firestore dokument u AppUser objekat
         return snap.toObject(AppUser::class.java)
     }
 
     suspend fun updateMyLocation(lat: Double, lng: Double) {
         val uid = currentUid() ?: return
 
+        //Upisivanje poslednje lokacije korisnika zajedno za vremenom
         db.collection("users").document(uid).set(
             mapOf(
                 "lastLat" to lat,
@@ -89,6 +102,7 @@ class AuthRepository(
         ).await()
     }
 
+    //Ponovna autentifikacija prilikom brisanja naloga
     suspend fun reauthenticateWithPassword(password: String) {
         val user = auth.currentUser ?: throw Exception("Not logged in")
         val email = user.email ?: throw Exception("No email for current user")
@@ -97,15 +111,7 @@ class AuthRepository(
         user.reauthenticate(cred).await()
     }
 
-    private fun asInt(value: Any?): Int = when (value) {
-        is Int -> value
-        is Long -> value.toInt()
-        is Double -> value.toInt()
-        is Float -> value.toInt()
-        is Number -> value.toInt()
-        else -> 0
-    }
-
+    //Brisanje u batch-evima
     private suspend fun deleteCollectionInBatches(col: CollectionReference, batchSize: Int = 450) {
         while (true) {
             val snap = col.limit(batchSize.toLong()).get(Source.SERVER).await()
@@ -123,7 +129,7 @@ class AuthRepository(
         val user = auth.currentUser ?: throw Exception("Not logged in")
         val uid = user.uid
 
-        // 0) Moji gyms
+        //Moji gyms
         val myGymsSnap = db.collection("gyms")
             .whereEqualTo("authorUid", uid)
             .get(Source.SERVER).await()
@@ -131,30 +137,31 @@ class AuthRepository(
         val myGymRefs = myGymsSnap.documents.map { it.reference }
         val myGymIds = myGymsSnap.documents.map { it.id }.toHashSet()
 
-        // Sve gyms (da bih ocistio moje comments/ratings svuda)
+        //Sve gyms (da bih ocistio moje comments/ratings svuda)
         val allGymsSnap = db.collection("gyms").get(Source.SERVER).await()
 
-        // 1) Obrisi moje ratings na tudjim gyms + preracunaj prosek
+        //1) Obrisi moje ratings na tudjim gyms + preracunaj prosecnu ocenu
         try {
             for (gymDoc in allGymsSnap.documents) {
                 val gymId = gymDoc.id
                 val gymRef = gymDoc.reference
 
-                // moje gyms brisem kasnije cele
+                //Moje gyms brisem kasnije cele
                 if (myGymIds.contains(gymId)) continue
 
-                // da li postoji moja ocena na ovoj teretani
+                // Da li postoji moja ocena na ovoj teretani
                 val ratingRef = gymRef.collection("ratings").document(uid)
                 val ratingSnap = ratingRef.get(Source.SERVER).await()
                 if (!ratingSnap.exists()) continue
 
+                //U istoj transakciji se brise ocena i racuna nova prosecna ocena
                 db.runTransaction { tx ->
                     val gSnap = tx.get(gymRef)
                     val rSnap = tx.get(ratingRef)
 
                     if (!gSnap.exists() || !rSnap.exists()) return@runTransaction null
 
-                    val value = asInt(rSnap.get("value"))
+                    val value = (rSnap.get("value") as? Number)?.toInt() ?: 0
                     val oldAvg = gSnap.getDouble("avgRating") ?: 0.0
                     val oldCount = gSnap.getLong("ratingCount") ?: 0L
 
@@ -178,7 +185,7 @@ class AuthRepository(
             throw Exception("Delete failed at: my ratings. ${e.message}")
         }
 
-        // 2) Brisem moje comments na svim gyms
+        //2) Brisem moje comments na svim gym-ovima
         try {
             for (gymDoc in allGymsSnap.documents) {
                 val gymRef = gymDoc.reference
@@ -201,7 +208,7 @@ class AuthRepository(
             throw Exception("Delete failed at: my comments. ${e.message}")
         }
 
-        // 3) Brisem moje gyms + njihove subkolekcije, pa gym doc
+        // 3) Brisem moje gym-ove zajedno sa njihovim ratings i comments
         try {
             for (gymRef in myGymRefs) {
                 deleteCollectionInBatches(gymRef.collection("ratings"))
@@ -212,14 +219,14 @@ class AuthRepository(
             throw Exception("Delete failed at: my gyms cleanup. ${e.message}")
         }
 
-        // 4) users/{uid}
+        // 4)Birsanje users/{uid}
         try {
             db.collection("users").document(uid).delete().await()
         } catch (e: Exception) {
             throw Exception("Delete failed at: user doc. ${e.message}")
         }
 
-        // 5) Auth user
+        // 5)Brisanje  Auth user
         try {
             user.delete().await()
         } catch (e: Exception) {

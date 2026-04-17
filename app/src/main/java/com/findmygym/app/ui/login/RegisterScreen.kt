@@ -24,22 +24,25 @@ fun RegisterScreen(
     onBackToLogin: () -> Unit,
     onGoMap: () -> Unit
 ) {
+    //ViewModel upravlja registracijom, loading stanjem i greskama
     val viewModel: AuthViewModel = viewModel()
     val focusManager = LocalFocusManager.current
 
+    //Lokalna stanja svih input polja
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
-
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
 
+    //Prikaz lozinke i potvrde lozinke
     var passVisible by remember { mutableStateOf(false) }
     var confirmVisible by remember { mutableStateOf(false) }
 
     Surface(
         modifier = Modifier
             .fillMaxSize()
+            //Klik van polja uklanja fokus sa inputa
             .pointerInput(Unit) {
                 detectTapGestures(onTap = { focusManager.clearFocus() })
             },
@@ -49,7 +52,9 @@ fun RegisterScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(24.dp)
+                //Omogucava scroll ako sadrzaj ne moze da stane na ekran
                 .verticalScroll(rememberScrollState())
+                //Dodavanje paddinga zbog tastature kada se otvori
                 .imePadding(),
             verticalArrangement = Arrangement.Center
         ) {
@@ -60,6 +65,7 @@ fun RegisterScreen(
             )
             Spacer(Modifier.height(16.dp))
 
+            //Polje za unos imena
             OutlinedTextField(
                 value = fullName,
                 onValueChange = { fullName = it },
@@ -69,6 +75,7 @@ fun RegisterScreen(
             )
             Spacer(Modifier.height(10.dp))
 
+            //Polje za unos Email-a
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
@@ -78,6 +85,7 @@ fun RegisterScreen(
             )
             Spacer(Modifier.height(10.dp))
 
+            //Polje za unos sifre, po defaultu skriveno
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -96,6 +104,7 @@ fun RegisterScreen(
             )
             Spacer(Modifier.height(10.dp))
 
+            //Polje za unos potvrde sifre, po defaultu skriveno
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
@@ -114,6 +123,7 @@ fun RegisterScreen(
             )
             Spacer(Modifier.height(10.dp))
 
+            //Polje za unos broja telefona
             OutlinedTextField(
                 value = phone,
                 onValueChange = { phone = it },
@@ -122,6 +132,7 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            //Prikaz greska
             viewModel.error?.let {
                 Spacer(Modifier.height(12.dp))
                 Text(it, color = MaterialTheme.colorScheme.error)
@@ -129,16 +140,19 @@ fun RegisterScreen(
 
             Spacer(Modifier.height(16.dp))
 
+            //Dugme za register
             Button(
                 onClick = {
                     focusManager.clearFocus()
                     viewModel.clearError()
 
+                    //Greska ukoliko se sifre ne poklapaju
                     if (password != confirmPassword) {
                         viewModel.showError("Passwords do not match")
                         return@Button
                     }
 
+                    //Registracija
                     viewModel.register(fullName, email, password, phone) { onGoMap() }
                 },
                 enabled = !viewModel.loading,
@@ -149,6 +163,7 @@ fun RegisterScreen(
 
             Spacer(Modifier.height(10.dp))
 
+            //Povratak na Login
             OutlinedButton(
                 onClick = {
                     focusManager.clearFocus()

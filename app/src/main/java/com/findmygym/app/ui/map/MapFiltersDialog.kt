@@ -29,6 +29,7 @@ fun MapFiltersDialog(
     onClear: () -> Unit,
     onCancel: () -> Unit
 ) {
+    //Lokalno stanje dijaloga krece od trenutno aktivnih filtera
     var q by rememberSaveable(initialQuery) { mutableStateOf(initialQuery) }
     var r by rememberSaveable(initialRadiusKm) { mutableIntStateOf(initialRadiusKm) }
 
@@ -58,6 +59,7 @@ fun MapFiltersDialog(
         confirmButton = {
             TextButton(
                 onClick = {
+                    //Skidanje fokusa sa input polja i primenjujena filtera
                     focusManager.clearFocus()
                     onApply(q, r)
                 }
@@ -69,6 +71,7 @@ fun MapFiltersDialog(
             Row {
                 TextButton(
                     onClick = {
+                        //Vracamo lokalna polja na prazne filtere i javljamo parent-u da ih ocisti
                         focusManager.clearFocus()
                         q = ""
                         r = 0

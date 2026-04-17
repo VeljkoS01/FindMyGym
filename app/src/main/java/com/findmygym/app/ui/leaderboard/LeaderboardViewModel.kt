@@ -12,24 +12,29 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 class LeaderboardViewModel(
+    //Firestore za citanje korisnika iz baze
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) : ViewModel() {
 
+    //Lista korisnika za prikaz na leaderboard ekranu
     var users by mutableStateOf<List<AppUser>>(emptyList())
         private set
 
+    //greske
     var error by mutableStateOf<String?>(null)
         private set
 
     init {
         viewModelScope.launch {
             try {
+                //Ucitavanje 50 korisnika sortiranih po broju poena nerastuce
                 val snap = db.collection("users")
                     .orderBy("points", Query.Direction.DESCENDING)
                     .limit(50)
                     .get()
                     .await()
 
+                //Firestore dokument u AppUser objekat
                 users = snap.toObjects(AppUser::class.java)
             } catch (e: Exception) {
                 error = e.message

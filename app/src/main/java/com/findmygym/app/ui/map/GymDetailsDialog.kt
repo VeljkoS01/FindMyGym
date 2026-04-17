@@ -20,23 +20,28 @@ fun GymDetailsDialog(
 ) {
     val viewModel: MapViewModel = viewModel()
 
+    //Uzimamo stanje komentara, rating-a i greske iz ViewModel-a
     val comments = viewModel.comments
     val hasRated = viewModel.hasRated
     val ratingSending = viewModel.ratingSending
     val commentSending = viewModel.commentSending
     val error = viewModel.commentError
 
+    //Lokalno stanje za prikaz svih komentara i za tekst novog komentara
     var showAllComments by remember { mutableStateOf(false) }
     var commentText by remember { mutableStateOf("") }
 
     LaunchedEffect(gym.id) {
+        //Kad se promeni gym ucitavamo njegove komentare i rating stanje
         viewModel.loadGymDetails(gym.id)
     }
 
+    //Prikazujemo samo poslednja 3 komentara u preview modu
     val preview: List<GymComment> = remember(comments) {
         comments.takeLast(3).reversed()
     }
 
+    //Puna lista komentara ide od najnovijeg ka najstarijem
     val allSorted: List<GymComment> = remember(comments) {
         comments.reversed()
     }

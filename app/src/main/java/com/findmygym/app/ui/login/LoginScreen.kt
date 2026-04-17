@@ -26,16 +26,25 @@ fun LoginScreen(
     onGoRegister: () -> Unit,
     onGoMap: () -> Unit
 ) {
+    //ViewModel cuva login stanje, loading i greske
     val viewModel: AuthViewModel = viewModel()
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
+
+    //DataStore helper za lokalno cuvanje "Remember me"
     val rememberStore = remember { RememberMeStore(context) }
 
+    //Lokalno stanje input polja
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    //Vidljivost lozinke
     var passVisible by remember { mutableStateOf(false) }
+
+    //Lokalno stanje za remember me
     var rememberMe by remember { mutableStateOf(true) }
 
+    //Ucitava sačuvanu remember me vrednost iz DataStore-a
     LaunchedEffect(Unit) {
         rememberStore.rememberMeFlow.collect { v ->
             rememberMe = v
@@ -45,6 +54,7 @@ fun LoginScreen(
     Surface(
         modifier = Modifier
             .fillMaxSize()
+            //Klik van input polja skida fokus i zatvara tastaturu
             .pointerInput(Unit) {
                 detectTapGestures(onTap = { focusManager.clearFocus() })
             },
@@ -54,7 +64,9 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(24.dp)
+                //Omogucava scroll ako sadrzaj ne moze da stane na ekran
                 .verticalScroll(rememberScrollState())
+                //Dodavanje paddinga zbog tastature kada se otvori
                 .imePadding(),
             verticalArrangement = Arrangement.Center
         ) {
@@ -65,6 +77,7 @@ fun LoginScreen(
             )
             Spacer(Modifier.height(16.dp))
 
+            //Polje za unos Email-a
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
@@ -75,6 +88,7 @@ fun LoginScreen(
 
             Spacer(Modifier.height(10.dp))
 
+            //Polje za unos lozinke, po defaultu skriveno
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -94,6 +108,7 @@ fun LoginScreen(
 
             Spacer(Modifier.height(8.dp))
 
+            //Remeber me
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Start
@@ -102,6 +117,7 @@ fun LoginScreen(
                     checked = rememberMe,
                     onCheckedChange = {
                         rememberMe = it
+                        //Promena checkboxa se odmah upisuje u DataStore
                         viewModel.setRememberMe(rememberStore, it)
                     }
                 )
@@ -113,6 +129,7 @@ fun LoginScreen(
                 )
             }
 
+            //Prikaz greska
             viewModel.error?.let {
                 Spacer(Modifier.height(10.dp))
                 Text(it, color = MaterialTheme.colorScheme.error)
@@ -120,6 +137,7 @@ fun LoginScreen(
 
             Spacer(Modifier.height(16.dp))
 
+            //Dugme koje poziva login
             Button(
                 onClick = {
                     focusManager.clearFocus()
@@ -133,6 +151,7 @@ fun LoginScreen(
 
             Spacer(Modifier.height(10.dp))
 
+            //Dugme za prelazak na register
             OutlinedButton(
                 onClick = {
                     focusManager.clearFocus()

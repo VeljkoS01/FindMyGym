@@ -13,6 +13,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 fun LeaderboardScreen(
     modifier: Modifier = Modifier
 ) {
+    //ViewModel cuva listu korisnika i gresku ukoliko postoji
     val viewModel: LeaderboardViewModel = viewModel()
 
     Column(
@@ -27,6 +28,7 @@ fun LeaderboardScreen(
 
         Spacer(Modifier.height(12.dp))
 
+        //Redni broj korisnika na leaderboard listi, fullName ili Email ukoliko ne postoji i ukupan broj poena
         LazyColumn {
             itemsIndexed(viewModel.users) { idx, u ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {

@@ -29,18 +29,27 @@ import com.findmygym.app.nav.Routes
 fun AppDrawerScaffold(
     title: String,
     currentRoute: String,
+    //Navigacija izmedjuu ekrana
     onGoMap: () -> Unit,
     onGoProfile: () -> Unit,
     onGoLeaderboard: () -> Unit,
+    //Akcije koje se izvrsavaju na Map ekranu
     onGoGymList: () -> Unit,
     onGoAddGym: () -> Unit,
+    //Logout
     onLogout: () -> Unit,
+    //Opcionalno dugme za filtere (Vidljivo samo na mapi)
     onOpenFilters: (() -> Unit)? = null,
+    //Glavni sadrzaj ekrana
     content: @Composable (PaddingValues) -> Unit
 ) {
+    //Stanje drawer-a (otvoren/zatvoren)
     val drawerState = rememberDrawerState(DrawerValue.Closed)
+
+    //Coroutine scope za otvaranje/zatvaranje drawer-a bez blokiranja aplikacije
     val scope = rememberCoroutineScope()
 
+    //Pomocna funkcija: prvo zatvori drawer pa onda izvrzi akciju
     fun closeDrawerThen(action: () -> Unit) {
         scope.launch {
             drawerState.close()
@@ -50,11 +59,14 @@ fun AppDrawerScaffold(
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+
+        //Da bi se izbeglo otvaranje drawer-a prilikom pomeranje mape prstom
         gesturesEnabled = false,
         drawerContent = {
             ModalDrawerSheet(
                 modifier = Modifier.fillMaxHeight()
             ) {
+                //Header drawer-a (naziv aplikacije + dugme za zatvaranje)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -70,6 +82,7 @@ fun AppDrawerScaffold(
 
                 Spacer(Modifier.height(4.dp))
 
+                //Navigacija ka mapi
                 NavigationDrawerItem(
                     label = { Text("Map") },
                     selected = currentRoute == Routes.MAP,
@@ -77,6 +90,7 @@ fun AppDrawerScaffold(
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
 
+                //Navigacija ka Profilu
                 NavigationDrawerItem(
                     label = { Text("Profile") },
                     selected = currentRoute == Routes.PROFILE,
@@ -84,6 +98,7 @@ fun AppDrawerScaffold(
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
 
+                //Navigacija ka Leaderboard-u
                 NavigationDrawerItem(
                     label = { Text("Leaderboard") },
                     selected = currentRoute == Routes.LEADERBOARD,
@@ -91,6 +106,7 @@ fun AppDrawerScaffold(
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
 
+                //Akcija koja otvara gymlist
                 NavigationDrawerItem(
                     label = { Text("Gym list") },
                     selected = false,
@@ -98,6 +114,7 @@ fun AppDrawerScaffold(
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
 
+                //Akcija koja pokrece dodavanje nove teretane
                 NavigationDrawerItem(
                     label = { Text("Add gym") },
                     selected = false,
@@ -107,6 +124,7 @@ fun AppDrawerScaffold(
 
                 Spacer(Modifier.weight(1f))
 
+                //Logout dugme na dnu ekrana
                 NavigationDrawerItem(
                     label = { Text("Logout") },
                     selected = false,
@@ -122,11 +140,13 @@ fun AppDrawerScaffold(
             topBar = {
                 TopAppBar(
                     title = { Text(title) },
+                    //Dugme za otvaranje drawer-a
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(Icons.Filled.Menu, contentDescription = "Menu")
                         }
                     },
+                    //Opcionalno dugme za filtere koje se prikazuje na Map ekranu
                     actions = {
                         onOpenFilters?.let { open ->
                             IconButton(onClick = open) {
@@ -136,6 +156,7 @@ fun AppDrawerScaffold(
                     }
                 )
             },
+            // Prosleđujemo padding content-u zbog TopAppBar-a
             content = content
         )
     }

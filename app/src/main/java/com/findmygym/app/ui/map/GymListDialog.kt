@@ -22,8 +22,10 @@ fun GymListDialog(
     onDismiss: () -> Unit,
     onSelect: (Gym) -> Unit
 ) {
+    //Po defaultu sortiranje po udaljenosti
     var sort by remember { mutableStateOf(GymSort.DISTANCE) }
 
+    //Sortirana lista u odnosu na izabrani kriterijum
     val sorted = remember(gyms, sort, myLatLng) {
         when (sort) {
             GymSort.RATING -> gyms.sortedWith(
@@ -33,6 +35,7 @@ fun GymListDialog(
             )
             GymSort.NAME -> gyms.sortedBy { it.name.lowercase() }
             GymSort.DISTANCE -> {
+                //Ako nemamo lokaciju korisnika, distance sort nema smisla pa prelazimo na ime
                 if (myLatLng == null) gyms.sortedBy { it.name.lowercase() }
                 else gyms.sortedBy { distanceKm(it) }
             }
@@ -48,6 +51,7 @@ fun GymListDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    //Clickable za odabir sortiranja
                     FilterChip(
                         selected = sort == GymSort.DISTANCE,
                         onClick = { sort = GymSort.DISTANCE },
@@ -77,6 +81,7 @@ fun GymListDialog(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                //Klik na teratanu vraca istu parent-u
                                 .clickable { onSelect(g) }
                                 .padding(vertical = 10.dp)
                         ) {
@@ -94,6 +99,7 @@ fun GymListDialog(
                                 )
                             }
 
+                            //Ako imamo lokaciju korisnika prikazujemo i udaljenost
                             if (myLatLng != null) {
                                 val d = distanceKm(g)
                                 val pretty =

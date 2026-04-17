@@ -21,6 +21,7 @@ fun MyGymsDialog(
         title = { Text("My gyms") },
         text = {
             if (gyms.isEmpty()) {
+                //Ako korisnik nema dodatih teretana prikazujemo poruku
                 Text("You haven't added any gyms yet.")
             } else {
                 LazyColumn(
@@ -32,6 +33,7 @@ fun MyGymsDialog(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                //Klik na teretanu prosledjuje teretanu i fokusira se na Mapi
                                 .clickable { onSelect(g) }
                                 .padding(vertical = 10.dp)
                         ) {
@@ -39,6 +41,7 @@ fun MyGymsDialog(
                             Spacer(Modifier.height(2.dp))
                             Text(g.type.ifBlank { "Gym" }, style = MaterialTheme.typography.bodySmall)
                             Spacer(Modifier.height(4.dp))
+                            //Prikaz prosecne ocene i broja ocena
                             Text(
                                 "⭐ ${"%.1f".format(g.avgRating)} (${g.ratingCount})",
                                 style = MaterialTheme.typography.bodySmall
@@ -49,6 +52,7 @@ fun MyGymsDialog(
                 }
             }
         },
+        //Dugme za zatvaranje dijaloga
         confirmButton = {
             TextButton(onClick = onDismiss) { Text("Close") }
         }
