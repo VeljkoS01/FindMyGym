@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.findmygym.app.data.model.Gym
@@ -113,7 +114,10 @@ fun GymDetailsDialog(
                 } else {
                     if (!showAllComments) {
                         preview.forEach { c ->
-                            CommentRow(c)
+                            CommentRow(
+                                c = c,
+                                singleLinePreview = true
+                            )
                             Spacer(Modifier.height(6.dp))
                         }
                     } else {
@@ -184,7 +188,10 @@ fun GymDetailsDialog(
 }
 
 @Composable
-private fun CommentRow(c: GymComment) {
+private fun CommentRow(
+    c: GymComment,
+    singleLinePreview: Boolean = false
+) {
     val sdf = remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()) }
     val date = remember(c.createdAt) {
         sdf.format(Date(c.createdAt))
@@ -195,7 +202,11 @@ private fun CommentRow(c: GymComment) {
             c.authorUsername.ifBlank { "User" },
             style = MaterialTheme.typography.bodySmall
         )
-        Text(c.text)
+        Text(
+            text = c.text,
+            maxLines = if (singleLinePreview) 1 else Int.MAX_VALUE,
+            overflow = if (singleLinePreview) TextOverflow.Ellipsis else TextOverflow.Clip
+        )
         Text(date, style = MaterialTheme.typography.bodySmall)
     }
 }
