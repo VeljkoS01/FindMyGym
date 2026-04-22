@@ -93,7 +93,7 @@ class GymRepository(
     }
 
     fun streamComments(gymId: String): Flow<List<GymComment>> = callbackFlow {
-        //Slusa orimene komentara za konkretnu teretanu
+        //Slusa promene komentara za konkretnu teretanu
         val reg = db.collection("gyms").document(gymId)
             .collection("comments")
             .orderBy("createdAt")

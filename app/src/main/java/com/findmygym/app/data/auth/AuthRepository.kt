@@ -111,18 +111,6 @@ class AuthRepository(
         user.reauthenticate(cred).await()
     }
 
-    //Brisanje u batch-evima
-    private suspend fun deleteCollectionInBatches(col: CollectionReference, batchSize: Int = 450) {
-        while (true) {
-            val snap = col.limit(batchSize.toLong()).get(Source.SERVER).await()
-            if (snap.isEmpty) break
-
-            val batch = db.batch()
-            for (d in snap.documents) batch.delete(d.reference)
-            batch.commit().await()
-        }
-    }
-
     /* Brisem korisnika kao i sve teretane koje je on napravio, ocene i komentare tim teretanama
     i sve ocene i komentare koje je korisnik ostavio na drugim teretanama */
     suspend fun deleteAccountAndData() {
@@ -226,11 +214,23 @@ class AuthRepository(
             throw Exception("Delete failed at: user doc. ${e.message}")
         }
 
-        // 5)Brisanje  Auth user
+        // 5)Brisanje Auth user
         try {
             user.delete().await()
         } catch (e: Exception) {
             throw Exception("Delete failed at: auth user. ${e.message}")
+        }
+    }
+
+    //Brisanje u batch-evima
+    private suspend fun deleteCollectionInBatches(col: CollectionReference, batchSize: Int = 450) {
+        while (true) {
+            val snap = col.limit(batchSize.toLong()).get(Source.SERVER).await()
+            if (snap.isEmpty) break
+
+            val batch = db.batch()
+            for (d in snap.documents) batch.delete(d.reference)
+            batch.commit().await()
         }
     }
 

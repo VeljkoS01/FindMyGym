@@ -87,7 +87,7 @@ fun AppDrawerScaffold(
                     label = { Text("Map") },
                     selected = currentRoute == Routes.MAP,
                     onClick = { closeDrawerThen(onGoMap) },
-                    modifier = Modifier.padding(horizontal = 12.dp)
+                    modifier = Modifier.padding(horizontal = 12.dp),
                 )
 
                 //Navigacija ka Profilu

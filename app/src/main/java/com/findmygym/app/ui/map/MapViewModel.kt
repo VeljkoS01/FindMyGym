@@ -55,7 +55,6 @@ class MapViewModel(
 
     //Pamtimo poslednju notifikovanu teretanu i vreme notifikacije da ne bi bilo spama
     private var lastNotifiedGymId: String? = null
-    private var lastNotifiedAt: Long = 0L
 
     //Odmah po kreiranju ViewModel-a pocinjemo da slusamo gyms kolekciju
     init {
@@ -117,6 +116,23 @@ class MapViewModel(
             .minByOrNull { it.second }
             ?.first
 
+        //Ako trenutno nema nijedne bliske teretane, resetujemo poslednju notifikovanu
+        if (near == null) {
+            lastNotifiedGymId = null
+            return
+        }
+
+        //Ako je ista teretana kao prosli put, ne saljemo novu notifikaciju
+        if (near.id == lastNotifiedGymId) return
+
+        lastNotifiedGymId = near.id
+
+        onNotify(
+            "Gym nearby",
+            "${near.name} is close to you"
+        )
+
+        /*
         //Cooldown za notifikacije
         val now = System.currentTimeMillis()
         val cooldownOk = now - lastNotifiedAt > 180000 //3min
@@ -130,6 +146,7 @@ class MapViewModel(
                 "${near.name} is close to you"
             )
         }
+         */
     }
 
     fun filteredGyms(myLat: Double?, myLng: Double?): List<Gym> {
